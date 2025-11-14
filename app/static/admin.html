@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Panel de Jefe – Sicher</title>
+
+<style>
+  :root{--bg:#0b0f17;--panel:#141b2c;--card:#0e1421;--mut:#9aa4b2;--txt:#e6edf3;--b:#1e2636;--btn:#335cce}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Roboto;background:var(--bg);color:var(--txt);display:flex;min-height:100vh}
+
+  aside{
+    width:260px;background:#111826;border-right:1px solid #1a2234;padding:20px;
+  }
+  aside h2{font-size:20px;margin:0 0 20px;font-weight:700}
+  aside .item{
+    padding:12px;margin-bottom:8px;border-radius:10px;cursor:pointer;color:var(--mut);
+  }
+  aside .item:hover{background:#1b2437}
+  aside .item.active{background:#23314e;color:#fff}
+
+  main{flex:1;padding:24px}
+  h1{margin-top:0;font-size:26px;font-weight:800}
+
+  table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden;margin-top:12px}
+  th,td{padding:12px;border-bottom:1px solid #1e2636;font-size:14px}
+  th{background:#192236;text-align:left;color:#8fb3ff}
+  tr:hover{background:#1a2335}
+
+  #usuarioHeader{color:#8fb3ff;margin-top:-12px;margin-bottom:20px;font-size:15px}
+</style>
+</head>
+
+<body>
+
+<aside>
+  <h2>Panel de Jefe</h2>
+  <p id="usuarioHeader">—</p>
+
+  <div class="item active" onclick="showTab(event,'usuarios')">👤 Usuarios</div>
+  <div class="item" onclick="showTab(event,'camaras')">📷 Cámaras</div>
+  <div class="item" onclick="showTab(event,'accesos')">📅 Accesos</div>
+  <div class="item" onclick="showTab(event,'acciones')">🛠 Acciones</div>
+
+  <div class="item" onclick="logout()">🚪 Cerrar sesión</div>
+</aside>
+
+<main>
+  <h1 id="titulo">Usuarios Registrados</h1>
+
+  <!-- Usuarios -->
+  <section id="usuarios" class="tab">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th><th>Apellido</th><th>Email</th><th>Cargo</th>
+        </tr>
+      </thead>
+      <tbody id="tblUsuarios"></tbody>
+    </table>
+  </section>
+
+  <!-- Cámaras -->
+  <section id="camaras" class="tab" style="display:none;">
+    <table>
+      <thead>
+        <tr><th>ID de Cámara</th><th>Fuente</th></tr>
+      </thead>
+      <tbody id="tblCamaras"></tbody>
+    </table>
+  </section>
+
+  <!-- Accesos -->
+  <section id="accesos" class="tab" style="display:none;">
+    <button onclick="clearAccesos()" style="margin-bottom:10px;padding:8px 14px;border-radius:8px;background:#8b1b1b;color:white;border:none;cursor:pointer;">
+        🗑 Borrar historial de accesos
+      </button>
+    <table>
+        <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Cargo</th>
+              <th>Fecha / Hora</th>
+            </tr>
+          </thead>
+          <tbody id="tblAccesos"></tbody>
+      <tbody id="tblAccesos"></tbody>
+    </table>
+  </section>
+
+  <!-- Acciones -->
+  <section id="acciones" class="tab" style="display:none;">
+    <button onclick="clearAcciones()" style="margin-bottom:10px;padding:8px 14px;border-radius:8px;background:#8b1b1b;color:white;border:none;cursor:pointer;">
+        🗑 Borrar historial de acciones
+      </button>
+      
+    <table>
+      <thead>
+        <tr><th>Usuario</th><th>Cámara</th><th>Acción</th><th>Fecha / Hora</th></tr>
+      </thead>
+      <tbody id="tblAcciones"></tbody>
+    </table>
+  </section>
+
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+
+/* ============================================================
+   Seguridad: solo un JEFE puede ver esta página
+============================================================ */
+(function checkAuth(){
+  const token = localStorage.getItem('sicher.token');
+  const cargo = localStorage.getItem('sicher.charge');
+
+  if (!token) return window.location.href = "/static/login.html";
+  if (cargo !== "jefe") return window.location.href = "/static/index.html";
+
+  const nombre = localStorage.getItem('sicher.nombre') || "";
+  const apellido = localStorage.getItem('sicher.apellido') || "";
+  $('#usuarioHeader').innerHTML = `👤 ${nombre} ${apellido}`;
+})();
+
+/* ============================================================
+   Navegación entre pestañas
+============================================================ */
+function showTab(ev, tab){
+  document.querySelectorAll(".tab").forEach(t=> t.style.display="none");
+  document.getElementById(tab).style.display="block";
+
+  document.querySelectorAll("aside .item").forEach(i=> i.classList.remove("active"));
+  ev.target.classList.add("active");
+
+  const titles = {
+    usuarios: "Usuarios Registrados",
+    camaras: "Cámaras Registradas",
+    accesos: "Historial de Accesos",
+    acciones: "Acciones Realizadas"
+  };
+  $('#titulo').innerText = titles[tab];
+}
+
+/* ============================================================
+   Cargar datos desde el backend
+============================================================ */
+async function loadUsuarios(){
+  const res = await fetch('/admin/users');
+  const data = await res.json();
+  $('#tblUsuarios').innerHTML = data.map(u=>`
+    <tr>
+      <td>${u.nombre}</td>
+      <td>${u.apellido}</td>
+      <td>${u.email}</td>
+      <td>${u.charge}</td>
+    </tr>
+  `).join('');
+}
+
+async function loadCamaras(){
+  const res = await fetch('/cameras');
+  const data = await res.json();
+  $('#tblCamaras').innerHTML = data.map(c=>`
+    <tr><td>${c.cam_id}</td><td>${c.src}</td></tr>
+  `).join('');
+}
+
+async function loadAccesos(){
+    const res = await fetch('/admin/logs/access');
+    const data = await res.json();
+    $('#tblAccesos').innerHTML = data.map(a=>`
+      <tr>
+        <td>${a.usuario}</td>
+        <td>${a.cargo}</td>
+        <td>${new Date(a.timestamp*1000).toLocaleString()}</td>
+      </tr>
+    `).join('');
+  }
+  
+  
+
+  async function loadAcciones(){
+    const res = await fetch('/admin/logs/cameras');
+    const data = await res.json();
+    $('#tblAcciones').innerHTML = data.map(a=>`
+      <tr>
+        <td>${a.usuario}</td>
+        <td>${a.cam_id}</td>
+        <td>${a.action}</td>
+        <td>${new Date(a.timestamp*1000).toLocaleString()}</td>
+      </tr>
+    `).join('');
+  }
+  
+
+/* ============================================================
+   Auto recarga (cada 5 s)
+============================================================ */
+function autoRefresh(){
+  loadUsuarios();
+  loadCamaras();
+  loadAccesos();
+  loadAcciones();
+}
+autoRefresh();
+setInterval(autoRefresh, 5000);
+
+/* ============================================================
+   Logout
+============================================================ */
+function logout(){
+  localStorage.clear();
+  window.location.href='/static/login.html';
+}
+async function clearAccesos(){
+    if(!confirm("¿Seguro que quieres borrar TODO el historial de accesos?")) return;
+    await fetch('/admin/logs/access/clear', { method: 'DELETE' });
+    loadAccesos();
+  }
+  
+  async function clearAcciones(){
+    if(!confirm("¿Seguro que quieres borrar TODO el historial de acciones?")) return;
+    await fetch('/admin/logs/actions/clear', { method: 'DELETE' });
+    loadAcciones();
+  }
+  
+</script>
+</body>
+</html>
