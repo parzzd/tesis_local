@@ -139,7 +139,6 @@
 
     <div class="row" style="margin-top:10px">
       <button id="btnAdd">Agregar/Actualizar</button>
-      <button id="btnReload" class="sec">Refrescar lista</button>
     </div>
 
     <h3 style="margin:14px 0 6px">Cámaras registradas</h3>
@@ -172,7 +171,6 @@
   <section class="panel" id="right">
     <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
       <h2 style="margin:0">Monitoreo</h2>
-      <div class="muted" id="srv">ws:// — desconectado</div>
     </div>
 
     <div id="camGrid" class="grid" style="margin-top:10px"></div>
@@ -185,6 +183,13 @@
 </footer>
 
 <script>
+  console.log("DEBUG who:", {
+    nombre: localStorage.getItem('sicher.nombre'),
+    apellido: localStorage.getItem('sicher.apellido'),
+    cargo: localStorage.getItem('sicher.charge'),
+    token: localStorage.getItem('sicher.token')
+  });
+  
 const alertQueue = [];
 let showingCam = null;
 let switching = false;
@@ -445,20 +450,79 @@ function setDot(cam_id, color){
   const dot = $('#dot-'+cam_id); 
   if(dot) dot.style.background=color;
 }
+async function acceptAlert(ev){
+  const cam_id = ev.target.dataset.cam;
+  const prob = parseFloat(ev.target.dataset.prob);
+  const ts = parseFloat(ev.target.dataset.ts);
+
+  const payload = {
+    cam_id,
+    prob,
+    timestamp: ts,
+    accepted: true
+  };
+
+  await fetch("/alerts/save", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  });
+
+  // quitar de lista
+  ev.target.parentElement.remove();
+}
+
+async function rejectAlert(ev){
+  const cam_id = ev.target.dataset.cam;
+  const prob = parseFloat(ev.target.dataset.prob);
+  const ts = parseFloat(ev.target.dataset.ts);
+
+  const payload = {
+    cam_id,
+    prob,
+    timestamp: ts,
+    accepted: false
+  };
+
+  await fetch("/alerts/save", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  });
+
+  // quitar de lista
+  ev.target.parentElement.remove();
+}
 
 function addAlert(msg){
-  const row=document.createElement('div');
-  row.className='alertrow';
-  row.textContent = `🚨 ${msg.cam_id} · prob=${msg.prob.toFixed(3)} · ${new Date(msg.ts*1000).toLocaleString()}`;
+  const row = document.createElement('div');
+  row.className = 'alertrow';
+
+  const tsText = new Date(msg.ts * 1000).toLocaleString();
+
+  row.innerHTML = `
+    <div style="flex:1">
+      🚨 <b>${msg.cam_id}</b>  
+      · prob=${msg.prob.toFixed(3)}  
+      · ${tsText}
+    </div>
+    <button class="sec btnOk" style="width:auto" data-cam="${msg.cam_id}" data-prob="${msg.prob}" data-ts="${msg.ts}">✔</button>
+    <button class="sec btnNo" style="width:auto" data-cam="${msg.cam_id}" data-prob="${msg.prob}" data-ts="${msg.ts}">✖</button>
+  `;
+
   $('#alerts').prepend(row);
+
+  // Asignar eventos
+  row.querySelector('.btnOk').onclick = acceptAlert;
+  row.querySelector('.btnNo').onclick = rejectAlert;
 }
+
 
 /* ===========================
     INIT
 =========================== */
 $('#btnLogout').onclick = logout;
 $('#btnAdd').onclick = addCamera;
-$('#btnReload').onclick = loadCameras;
 
 (async function init(){
   if(!localStorage.getItem(tokenKey)){ 
@@ -466,7 +530,7 @@ $('#btnReload').onclick = loadCameras;
     return; 
   }
   setWho();
-  await loadOverlay();   // <<<<<<<< IMPORTANTE
+  await loadOverlay();
   await loadCameras();
 })();
 </script>

@@ -19,7 +19,9 @@
   }
   aside .item:hover{background:#1b2437}
   aside .item.active{background:#23314e;color:#fff}
-
+  .sec{
+    margin-bottom:10px;padding:8px 14px;border-radius:8px;background:#8b1b1b;color:white;border:none;cursor:pointer;
+  }
   main{flex:1;padding:24px}
   h1{margin-top:0;font-size:26px;font-weight:800}
 
@@ -40,9 +42,9 @@
 
   <div class="item active" onclick="showTab(event,'usuarios')">👤 Usuarios</div>
   <div class="item" onclick="showTab(event,'camaras')">📷 Cámaras</div>
+  <div class="item" onclick="showTab(event,'alertas')">⚠ Alertas</div>
   <div class="item" onclick="showTab(event,'accesos')">📅 Accesos</div>
   <div class="item" onclick="showTab(event,'acciones')">🛠 Acciones</div>
-
   <div class="item" onclick="logout()">🚪 Cerrar sesión</div>
 </aside>
 
@@ -70,11 +72,26 @@
       <tbody id="tblCamaras"></tbody>
     </table>
   </section>
+<!-- Alertas -->
+<section id="alertas" class="tab" style="display:none;">
+  <button onclick="clearAlertas()" class="sec">
+    Borrar historial de alertas
+  </button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Cámara</th><th>Probabilidad</th><th>Fecha / Hora</th>
+      </tr>
+    </thead>
+    <tbody id="tblAlertas"></tbody>
+  </table>
+</section>
 
   <!-- Accesos -->
   <section id="accesos" class="tab" style="display:none;">
-    <button onclick="clearAccesos()" style="margin-bottom:10px;padding:8px 14px;border-radius:8px;background:#8b1b1b;color:white;border:none;cursor:pointer;">
-        🗑 Borrar historial de accesos
+    <button onclick="clearAccesos()" class="sec" >
+        Borrar historial de accesos
       </button>
     <table>
         <thead>
@@ -91,8 +108,8 @@
 
   <!-- Acciones -->
   <section id="acciones" class="tab" style="display:none;">
-    <button onclick="clearAcciones()" style="margin-bottom:10px;padding:8px 14px;border-radius:8px;background:#8b1b1b;color:white;border:none;cursor:pointer;">
-        🗑 Borrar historial de acciones
+    <button onclick="clearAcciones()" class ="sec">
+        Borrar historial de acciones
       </button>
       
     <table>
@@ -136,6 +153,7 @@ function showTab(ev, tab){
   const titles = {
     usuarios: "Usuarios Registrados",
     camaras: "Cámaras Registradas",
+    alertas:"Historial de Alertas",
     accesos: "Historial de Accesos",
     acciones: "Acciones Realizadas"
   };
@@ -156,6 +174,22 @@ async function loadUsuarios(){
       <td>${u.charge}</td>
     </tr>
   `).join('');
+}
+async function loadAlertas(){
+  const res = await fetch('/admin/logs/alerts');
+  const data = await res.json();
+  $('#tblAlertas').innerHTML = data.map(a=>`
+    <tr>
+      <td>${a.cam_id}</td>
+      <td>${a.prob.toFixed(3)}</td>
+      <td>${new Date(a.timestamp*1000).toLocaleString()}</td>
+    </tr>
+  `).join('');
+}
+async function clearAlertas(){
+  if(!confirm("¿Eliminar todas las alertas?")) return;
+  await fetch('/admin/logs/alerts/clear', { method:"DELETE" });
+  loadAlertas();
 }
 
 async function loadCamaras(){
@@ -202,7 +236,10 @@ function autoRefresh(){
   loadCamaras();
   loadAccesos();
   loadAcciones();
+  loadAlertas(); 
 }
+
+
 autoRefresh();
 setInterval(autoRefresh, 5000);
 

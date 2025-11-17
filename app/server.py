@@ -18,6 +18,13 @@ from pydantic import BaseModel
 from ultralytics import YOLO
 import threading
 
+
+#PENDIENTES
+#agregar dashboard de alertas en administrador
+#emitir alerta simulado, guardar en base de datos/rechazar (camara,operador,timestamp,probabilidad)
+######################
+
+
 # ==========================================================
 # BASE DE DATOS
 # ==========================================================
@@ -49,7 +56,12 @@ def cleanup_logs_periodically():
 
 # iniciar thread de limpieza
 threading.Thread(target=cleanup_logs_periodically, daemon=True).start()
-
+class AlertLog(Base):
+    __tablename__ = "alert_logs"
+    id = Column(Integer, primary_key=True)
+    cam_id = Column(String)
+    prob = Column(Float)
+    timestamp = Column(Float, default=lambda: time.time())
 class AccessLog(Base):
     __tablename__ = "access_logs"
     id = Column(Integer, primary_key=True)
@@ -65,7 +77,6 @@ class CameraAction(Base):
     timestamp = Column(Float, default=lambda: time.time())
 
 Base.metadata.create_all(bind=engine)
-
 
 def get_db():
     db = SessionLocal()
@@ -433,7 +444,14 @@ class CameraWorker:
             # ALERTA
             if not self.on_state and p_vid >= THR_ON:
                 self.on_state = True
-                await self.broadcast({"type":"alert","cam_id":self.cam_id,"prob":p_vid,"ts":now})
+
+                await self.broadcast({
+                    "type":"alert",
+                    "cam_id": self.cam_id,
+                    "prob": p_vid,
+                    "ts": now
+                })
+
 
             elif self.on_state and p_vid <= THR_OFF:
                 self.on_state = False
@@ -474,6 +492,19 @@ class CameraWorker:
                 self.clients.discard(ws)
 
 
+@app.get("/admin/logs/alerts")
+def admin_alert_logs(db: Session = Depends(get_db)):
+    logs = db.query(AlertLog).all()
+    return [{
+        "cam_id": l.cam_id,
+        "prob": l.prob,
+        "timestamp": l.timestamp
+    } for l in logs]
+@app.delete("/admin/logs/alerts/clear")
+def clear_alert_logs(db: Session = Depends(get_db)):
+    db.query(AlertLog).delete()
+    db.commit()
+    return {"ok": True, "msg": "Alertas eliminadas"}
 
 WORKERS: Dict[str, CameraWorker] = {}
 
@@ -499,3 +530,22 @@ async def ws_stream(ws: WebSocket, cam_id: str):
             await ws.receive_text()
     except WebSocketDisconnect:
         worker.clients.discard(ws)
+
+class AlertDecision(BaseModel):
+    cam_id: str
+    prob: float
+    timestamp: float
+    accepted: bool
+
+@app.post("/alerts/save")
+def save_alert(decision: AlertDecision, db: Session = Depends(get_db)):
+    if decision.accepted:
+        db.add(AlertLog(
+            cam_id=decision.cam_id,
+            prob=decision.prob,
+            timestamp=decision.timestamp
+        ))
+        db.commit()
+        return {"ok": True, "msg": "Alerta guardada"}
+    else:
+        return {"ok": True, "msg": "Alerta descartada"}
