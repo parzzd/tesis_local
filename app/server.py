@@ -1,6 +1,6 @@
 # uvicorn app.server:app --reload --host 0.0.0.0 --port 8000
-import os, time, json, base64, asyncio
-from typing import Dict, Any, Optional, Set
+import time, json, base64, asyncio
+from typing import Dict, Set
 from pathlib import Path
 from collections import deque
 from datetime import datetime, timedelta
@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 import numpy as np
 import joblib
 import hashlib
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Body
@@ -24,14 +23,9 @@ import threading
 #emitir alerta simulado, guardar en base de datos/rechazar (camara,operador,timestamp,probabilidad)
 ######################
 
-
-# ==========================================================
-# BASE DE DATOS
-# ==========================================================
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import Session
 from app.database import Base, engine, SessionLocal
-from app.models import User
+from app.models import *
 LOG_RETENTION_DAYS = 7 #variar el dia para limpieza de logs
 
 def cleanup_logs_periodically():
@@ -53,28 +47,8 @@ def cleanup_logs_periodically():
 
         time.sleep(24 * 3600)
 
-
-# iniciar thread de limpieza
 threading.Thread(target=cleanup_logs_periodically, daemon=True).start()
-class AlertLog(Base):
-    __tablename__ = "alert_logs"
-    id = Column(Integer, primary_key=True)
-    cam_id = Column(String)
-    prob = Column(Float)
-    timestamp = Column(Float, default=lambda: time.time())
-class AccessLog(Base):
-    __tablename__ = "access_logs"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    timestamp = Column(Float, default=lambda: time.time())
 
-class CameraAction(Base):
-    __tablename__ = "camera_actions"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    cam_id = Column(String)
-    action = Column(String)
-    timestamp = Column(Float, default=lambda: time.time())
 
 Base.metadata.create_all(bind=engine)
 
@@ -151,9 +125,7 @@ def pool_scores(scores, pool="topk", topk_frac=0.2):
     return float(np.partition(arr, -k)[-k:].mean())
 
 
-# ==========================================================
-# CARGA DE MODELOS
-# ==========================================================
+
 def load_artifacts():
     keras_model = load_model(str(KERAS_MODEL), compile=False)
     stats = np.load(NORM_STATS)
@@ -172,9 +144,7 @@ KERAS, MU, SD, THR_ON, LGBM, POSE = load_artifacts()
 THR_OFF = THR_ON - HYST_GAP
 
 
-# ==========================================================
-# FASTAPI SETUP
-# ==========================================================
+
 app = FastAPI(title="vigilancia sistema")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -192,9 +162,7 @@ def admin_page():
     return FileResponse(STATIC_DIR / "admin.html")
 
 
-# ==========================================================
-# CONTROL DEL OVERLAY
-# ==========================================================
+
 @app.get("/overlay/get")
 def overlay_get():
     return {"overlay": DRAW_OVERLAY}
@@ -205,13 +173,6 @@ def overlay_set(payload: dict = Body(...)):
     DRAW_OVERLAY = bool(payload.get("overlay", True))
     return {"ok": True, "overlay": DRAW_OVERLAY}
 
-
-# ==========================================================
-# LOGIN
-# ==========================================================
-class LoginRequest(BaseModel):
-    email: str
-    password: str
 
 @app.post("/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):
@@ -245,16 +206,6 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     }
 
 
-# ==========================================================
-# REGISTER
-# ==========================================================
-class RegisterRequest(BaseModel):
-    nombre: str
-    apellido: str
-    email: str
-    password: str
-    charge: str
-    codigo: Optional[str] = None
 
 @app.post("/register")
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
@@ -279,9 +230,6 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
-# ==========================================================
-# ADMIN
-# ==========================================================
 @app.get("/admin/users")
 def admin_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
@@ -334,12 +282,8 @@ def clear_action_logs(db: Session = Depends(get_db)):
     db.commit()
     return {"ok": True, "msg": "Historial de acciones eliminado"}
 
-# ==========================================================
-# CAMERAS
-# ==========================================================
-class CameraConfig(BaseModel):
-    cam_id: str
-    src: str
+
+
 
 CAMERAS: Dict[str, CameraConfig] = {}
 
@@ -363,9 +307,7 @@ def list_cameras():
     return list(CAMERAS.values())
 
 
-# ==========================================================
-# WORKER + STREAM
-# ==========================================================
+
 class CameraWorker:
     def __init__(self, cam_id, src):
         self.cam_id = cam_id
@@ -402,7 +344,6 @@ class CameraWorker:
                 await self.broadcast({"type":"error"})
                 break
 
-            # YOLO POSE
             res = POSE.predict(frame, imgsz=IMGSZ, conf=CONF_POSE, verbose=False)[0]
 
             kps_f = None
@@ -415,7 +356,6 @@ class CameraWorker:
 
                 kps_f = np.concatenate([xy, c[...,None]], axis=-1)
 
-            # FEATURES
             feat51 = pool_frame_to_51(kps_f, self.W, self.H)
             self.win_feats.append(feat51)
 
@@ -428,20 +368,16 @@ class CameraWorker:
                 p_win = float(KERAS.predict(X[np.newaxis], verbose=0).ravel()[0])
                 p_win = np.clip(p_win, 0, 1)
 
-                # === Ventana reciente para p_vid ===
-                # Mantener solo últimos 60 frames (~2.5 segundos)
                 while len(self.video_scores) > 60:
                     self.video_scores.popleft()
 
                 self.video_scores.append(p_win)
 
-                # p_vid = promedio de los últimos frames recientes (baja rápido)
                 p_vid = float(np.mean(self.video_scores))
 
 
             now = time.time()
 
-            # ALERTA
             if not self.on_state and p_vid >= THR_ON:
                 self.on_state = True
 
@@ -456,7 +392,6 @@ class CameraWorker:
             elif self.on_state and p_vid <= THR_OFF:
                 self.on_state = False
 
-            # 🔥 OVERLAY DINÁMICO
             try:
                 if DRAW_OVERLAY:
                     shown = res.plot()
@@ -531,11 +466,7 @@ async def ws_stream(ws: WebSocket, cam_id: str):
     except WebSocketDisconnect:
         worker.clients.discard(ws)
 
-class AlertDecision(BaseModel):
-    cam_id: str
-    prob: float
-    timestamp: float
-    accepted: bool
+
 
 @app.post("/alerts/save")
 def save_alert(decision: AlertDecision, db: Session = Depends(get_db)):
