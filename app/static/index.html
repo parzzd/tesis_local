@@ -385,7 +385,7 @@ function camCard(cam_id){
 }
 
 function openWS(cam_id){
-  if(!$('#card-'+cam_id)) $('#camGrid').appendChild(camCard(cam_id));
+  if(!document.getElementById(`card-${cam_id}`)) $('#camGrid').appendChild(camCard(cam_id));
   if(wsMap.has(cam_id)) return;
 
   const url = wsUrl(`/ws/stream/${cam_id}`);
