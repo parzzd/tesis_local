@@ -32,6 +32,7 @@
 
   #usuarioHeader{color:#8fb3ff;margin-top:-12px;margin-bottom:20px;font-size:15px}
 </style>
+<script src="/config.js"></script>
 </head>
 
 <body>
@@ -123,6 +124,7 @@
 
 <script>
 const $ = s => document.querySelector(s);
+const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
 
 /* ============================================================
    Seguridad: solo un JEFE puede ver esta página
@@ -131,8 +133,8 @@ const $ = s => document.querySelector(s);
   const token = localStorage.getItem('sicher.token');
   const cargo = localStorage.getItem('sicher.charge');
 
-  if (!token) return window.location.href = "/static/login.html";
-  if (cargo !== "jefe") return window.location.href = "/static/index.html";
+  if (!token) return window.location.href = "/";
+  if (cargo !== "jefe") return window.location.href = "/dashboard";
 
   const nombre = localStorage.getItem('sicher.nombre') || "";
   const apellido = localStorage.getItem('sicher.apellido') || "";
@@ -163,7 +165,7 @@ function showTab(ev, tab){
    Cargar datos desde el backend
 ============================================================ */
 async function loadUsuarios(){
-  const res = await fetch('/admin/users');
+  const res = await fetch(apiUrl('/admin/users'));
   const data = await res.json();
   $('#tblUsuarios').innerHTML = data.map(u=>`
     <tr>
@@ -175,7 +177,7 @@ async function loadUsuarios(){
   `).join('');
 }
 async function loadAlertas(){
-  const res = await fetch('/admin/logs/alerts');
+  const res = await fetch(apiUrl('/admin/logs/alerts'));
   const data = await res.json();
   $('#tblAlertas').innerHTML = data.map(a=>`
     <tr>
@@ -187,12 +189,12 @@ async function loadAlertas(){
 }
 async function clearAlertas(){
   if(!confirm("¿Eliminar todas las alertas?")) return;
-  await fetch('/admin/logs/alerts/clear', { method:"DELETE" });
+  await fetch(apiUrl('/admin/logs/alerts/clear'), { method:"DELETE" });
   loadAlertas();
 }
 
 async function loadCamaras(){
-  const res = await fetch('/cameras');
+  const res = await fetch(apiUrl('/cameras'));
   const data = await res.json();
   $('#tblCamaras').innerHTML = data.map(c=>`
     <tr><td>${c.cam_id}</td><td>${c.src}</td></tr>
@@ -200,7 +202,7 @@ async function loadCamaras(){
 }
 
 async function loadAccesos(){
-    const res = await fetch('/admin/logs/access');
+    const res = await fetch(apiUrl('/admin/logs/access'));
     const data = await res.json();
     $('#tblAccesos').innerHTML = data.map(a=>`
       <tr>
@@ -214,7 +216,7 @@ async function loadAccesos(){
   
 
   async function loadAcciones(){
-    const res = await fetch('/admin/logs/cameras');
+    const res = await fetch(apiUrl('/admin/logs/cameras'));
     const data = await res.json();
     $('#tblAcciones').innerHTML = data.map(a=>`
       <tr>
@@ -247,17 +249,17 @@ setInterval(autoRefresh, 5000);
 ============================================================ */
 function logout(){
   localStorage.clear();
-  window.location.href='/static/login.html';
+  window.location.href='/';
 }
 async function clearAccesos(){
     if(!confirm("¿Seguro que quieres borrar TODO el historial de accesos?")) return;
-    await fetch('/admin/logs/access/clear', { method: 'DELETE' });
+    await fetch(apiUrl('/admin/logs/access/clear'), { method: 'DELETE' });
     loadAccesos();
   }
   
   async function clearAcciones(){
     if(!confirm("¿Seguro que quieres borrar TODO el historial de acciones?")) return;
-    await fetch('/admin/logs/actions/clear', { method: 'DELETE' });
+    await fetch(apiUrl('/admin/logs/actions/clear'), { method: 'DELETE' });
     loadAcciones();
   }
   

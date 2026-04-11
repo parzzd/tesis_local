@@ -10,8 +10,6 @@ from typing import List
 
 import numpy as np
 import joblib
-from keras.models import load_model
-from ultralytics import YOLO
 
 
 # ══════════════════════════════════════════════════════════
@@ -231,6 +229,9 @@ def load_artifacts(models_dir: str | Path, pose_weights: str):
     """
     Retorna: (keras_model, mu, sd, thr_on, thr_off, lgbm, pose, stacker)
     """
+    from keras.models import load_model
+    from ultralytics import YOLO
+
     models_dir = Path(models_dir)
 
     keras_path  = models_dir / "mix_cnn_lstm_T32_F51.keras"

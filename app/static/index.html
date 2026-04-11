@@ -113,6 +113,7 @@
     }
 
   </style>
+  <script src="/config.js"></script>
 </head>
 <body>
 <header>
@@ -199,6 +200,8 @@ const tokenKey = 'sicher.token';
 const emailKey = 'sicher.email';
 const wsMap = new Map();
 let activeBigCam = null;
+const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
+const wsUrl = path => (window.sicherWsUrl ? window.sicherWsUrl(path) : path);
 function enqueueCamera(cam_id, pvid){
   // evitar duplicados
   if(!alertQueue.some(c => c.cam_id === cam_id)){
@@ -271,7 +274,7 @@ function restoreCamera(cam_id){
 =========================== */
 async function loadOverlay(){
   try {
-    const res = await fetch('/overlay/get');
+    const res = await fetch(apiUrl('/overlay/get'));
     const data = await res.json();
     $('#chkOverlay').checked = data.overlay === true;
   } catch(e){
@@ -284,7 +287,7 @@ async function loadOverlay(){
 =========================== */
 async function setOverlay(){
   const val = $('#chkOverlay').checked;
-  await fetch('/overlay/set', {
+  await fetch(apiUrl('/overlay/set'), {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ overlay: val })
@@ -308,7 +311,7 @@ function setWho() {
 function logout(){
   localStorage.removeItem(tokenKey);
   localStorage.removeItem(emailKey);
-  window.location.href = '/static/login.html';
+  window.location.href = '/';
 }
 
 /* ===========================
@@ -318,14 +321,14 @@ async function addCamera(){
   const cam_id = $('#cam_id').value.trim();
   const src = $('#cam_src').value.trim();
   if(!cam_id || !src) return alert('Completa cam_id y src');
-  const res = await fetch("/cameras",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cam_id,src})});
+  const res = await fetch(apiUrl("/cameras"),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cam_id,src})});
   if(!res.ok){ alert('No se pudo registrar'); return; }
   await loadCameras();
 }
 
 async function deleteCamera(cam_id){
   closeWS(cam_id);
-  await fetch("/cameras/"+encodeURIComponent(cam_id),{
+  await fetch(apiUrl("/cameras/"+encodeURIComponent(cam_id)),{
     method:'DELETE'
   });
   await loadCameras();
@@ -345,7 +348,7 @@ function rowCam(cfg){
 }
 
 async function loadCameras(){
-  const res = await fetch("/cameras");
+  const res = await fetch(apiUrl("/cameras"));
   const cams = await res.json();
   const list = $('#camList'); 
   list.innerHTML='';
@@ -385,7 +388,7 @@ function openWS(cam_id){
   if(!$('#card-'+cam_id)) $('#camGrid').appendChild(camCard(cam_id));
   if(wsMap.has(cam_id)) return;
 
-  const url = `${(location.protocol==='https:'?'wss':'ws')}://${location.host}/ws/stream/${cam_id}`;
+  const url = wsUrl(`/ws/stream/${cam_id}`);
   const ws = new WebSocket(url);
 
   ws.onopen = ()=>{
@@ -462,7 +465,7 @@ async function acceptAlert(ev){
     accepted: true
   };
 
-  await fetch("/alerts/save", {
+  await fetch(apiUrl("/alerts/save"), {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify(payload)
@@ -484,7 +487,7 @@ async function rejectAlert(ev){
     accepted: false
   };
 
-  await fetch("/alerts/save", {
+  await fetch(apiUrl("/alerts/save"), {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify(payload)
@@ -525,9 +528,9 @@ $('#btnLogout').onclick = logout;
 $('#btnAdd').onclick = addCamera;
 
 (async function init(){
-  if(!localStorage.getItem(tokenKey)){ 
-    window.location.href='/static/login.html'; 
-    return; 
+  if(!localStorage.getItem(tokenKey)){
+    window.location.href='/';
+    return;
   }
   setWho();
   await loadOverlay();

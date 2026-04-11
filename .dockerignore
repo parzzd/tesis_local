@@ -1,0 +1,53 @@
+.git
+.idea
+.vscode
+.venv
+env
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.DS_Store
+Thumbs.db
+.env
+.env.*
+users.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Training / dataset assets
+RWF-2000/
+UBI_FIGHTS/
+DATASETS_COMBINADOS/
+Dataset_Le21+GMDCSA24/
+CHAD_VIDEOS/
+anomaly_labels/
+out_npz/
+out_npz_fall/
+out_npz_video/
+data/
+
+# Keep only the runtime model artifacts from models_mix2
+models_mix/
+models_mix3/
+models_mix2/*
+!models_mix2/lgbm_model.pkl
+!models_mix2/stacker.pkl
+!models_mix2/mix_cnn_lstm_T32_F51.keras
+!models_mix2/mix_cnn_lstm_T32_F51_norm_stats.npz
+!models_mix2/mix_cnn_lstm_T32_F51_threshold.json
+
+# Keep only the runtime pose model
+yolo*.pt
+!yolo11s-pose.pt
+
+# Frontend build output is created for Vercel, not needed in Docker
+app/static/config.js
+node_modules/
+dist/
+build/

@@ -29,6 +29,7 @@
        padding:10px;border-radius:10px;font-size:13px}
   #regBox{display:none;margin-top:25px;padding-top:20px;border-top:1px solid #1a2234;}
 </style>
+<script src="/config.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -104,6 +105,7 @@
 const $ = s => document.querySelector(s);
 const tokenKey = 'sicher.token';
 const emailKey = 'sicher.email';
+const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
 
 // Recuperar email recordado
 const remembered = localStorage.getItem(emailKey);
@@ -136,7 +138,7 @@ async function registerUser() {
     codigo:   $('#reg_codigo').value.trim()
   };
 
-  const res = await fetch('/register', {
+  const res = await fetch(apiUrl('/register'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -172,7 +174,7 @@ async function doLogin() {
   triesBox.style.display = 'none';
 
   try {
-    const res = await fetch('/login', {
+    const res = await fetch(apiUrl('/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -184,7 +186,7 @@ async function doLogin() {
     if (res.status === 403 && data.blocked) {
       errBox.textContent = data.error;
       errBox.style.display = 'block';
-      window.location.href = "/static/login_fail.html";
+      window.location.href = "/login_fail";
       return;
     }
 
@@ -210,9 +212,9 @@ async function doLogin() {
 
     // Redirección según cargo
     if (data.charge === "jefe")
-      window.location.href = "/static/admin.html";
+      window.location.href = "/admin";
     else
-      window.location.href = "/static/index.html";
+      window.location.href = "/dashboard";
 
   } catch (e) {
     errBox.textContent = 'Error de conexión.';

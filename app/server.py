@@ -9,9 +9,14 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import cv2
 
+try:
+    cv2.setNumThreads(1)
+except Exception:
+    pass
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Body
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -64,7 +69,23 @@ MAX_ATTEMPTS       = 3
 BLOCK_TIME_MINUTES = 5
 
 # Thread pool para operaciones bloqueantes (cv2, YOLO, Keras)
-_executor = ThreadPoolExecutor(max_workers=4)
+_executor = ThreadPoolExecutor(max_workers=2)
+
+# Modelos pesados: se cargan bajo demanda para dejar que Render abra el puerto.
+ARTIFACTS = None
+ARTIFACTS_LOCK = threading.Lock()
+
+
+def get_artifacts():
+    global ARTIFACTS
+    if ARTIFACTS is not None:
+        return ARTIFACTS
+
+    with ARTIFACTS_LOCK:
+        if ARTIFACTS is None:
+            log.info("Cargando modelos bajo demanda desde %s", MODELS_DIR)
+            ARTIFACTS = load_artifacts(MODELS_DIR, POSE_WEIGHTS)
+    return ARTIFACTS
 
 
 # ==========================================================
@@ -100,12 +121,6 @@ def get_db():
 
 
 # ==========================================================
-# CARGAR MODELOS (LSTM + LGBM + YOLO)
-# ==========================================================
-KERAS, MU, SD, THR_ON, THR_OFF, LGBM, POSE, STACKER = load_artifacts(MODELS_DIR, POSE_WEIGHTS)
-
-
-# ==========================================================
 # APP
 # ==========================================================
 app = FastAPI(title="Sistema de Videovigilancia")
@@ -133,6 +148,38 @@ def dashboard():
 @app.get("/admin")
 def admin_page():
     return FileResponse(STATIC_DIR / "admin.html")
+
+@app.get("/login_fail")
+def login_fail_page():
+    return FileResponse(STATIC_DIR / "login_fail.html")
+
+
+@app.get("/config.js")
+def frontend_config():
+    return Response(
+        content="""
+window.SICHER_CONFIG = {
+  API_BASE_URL: "",
+  WS_BASE_URL: ""
+};
+window.sicherApiUrl = function(path) {
+  const base = (window.SICHER_CONFIG && window.SICHER_CONFIG.API_BASE_URL) || "";
+  return base ? base.replace(/\\/$/, "") + path : path;
+};
+window.sicherWsUrl = function(path) {
+  const config = window.SICHER_CONFIG || {};
+  const base = config.WS_BASE_URL || config.API_BASE_URL || "";
+  if (!base) {
+    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${proto}://${window.location.host}${path}`;
+  }
+  const url = new URL(base);
+  const proto = url.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${url.host}${path}`;
+};
+""".strip(),
+        media_type="application/javascript",
+    )
 
 
 # ── Overlay toggle ────────────────────────────────────────
@@ -342,8 +389,10 @@ class CameraWorker:
         if not ok:
             return None
 
+        keras_model, mu, sd, thr_on, thr_off, lgbm, pose, stacker = get_artifacts()
+
         # Pose estimation
-        res = POSE.predict(frame, imgsz=IMGSZ, conf=CONF_POSE, iou=IOU_POSE, verbose=False)[0]
+        res = pose.predict(frame, imgsz=IMGSZ, conf=CONF_POSE, iou=IOU_POSE, verbose=False)[0]
 
         kps_f = None
         if res.keypoints is not None and res.keypoints.xy.shape[0] > 0:
@@ -362,16 +411,16 @@ class CameraWorker:
 
         if len(self.win_feats) == SEQ_LEN:
             Xw = np.stack(self.win_feats)
-            p_win = predict_window(Xw, KERAS, MU, SD, lgbm=LGBM, fusion_w=FUSION_W, stacker=STACKER)
+            p_win = predict_window(Xw, keras_model, mu, sd, lgbm=lgbm, fusion_w=FUSION_W, stacker=stacker)
             self.video_scores.append(p_win)
             p_vid = pool_scores(list(self.video_scores), pool=POOL_METHOD, topk_frac=TOPK_FRAC)
 
         # Histéresis
         fired_alert = False
-        if not self.on_state and p_vid >= THR_ON:
+        if not self.on_state and p_vid >= thr_on:
             self.on_state = True
             fired_alert = True
-        elif self.on_state and p_vid <= THR_OFF:
+        elif self.on_state and p_vid <= thr_off:
             self.on_state = False
 
         # Render JPEG

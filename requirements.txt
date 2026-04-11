@@ -5,7 +5,7 @@ python-dotenv
 sqlalchemy
 psycopg2-binary
 numpy
-opencv-python
+opencv-python-headless
 joblib
 keras
 tensorflow
