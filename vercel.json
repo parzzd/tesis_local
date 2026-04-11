@@ -1,6 +1,7 @@
 {
+  "installCommand": "echo 'skip'",
   "buildCommand": "npm run build",
-  "outputDirectory": "static",
+  "outputDirectory": "app/static",
   "rewrites": [
     {
       "source": "/",
