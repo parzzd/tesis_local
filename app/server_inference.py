@@ -68,6 +68,10 @@ FUSION_W     = float(os.getenv("FUSION_W", "0.50"))
 VIDEO_MAX_SCORES = 900
 DRAW_OVERLAY     = True
 
+# Predicciones de warmup tras llenar la ventana inicial: se descartan del
+# pooling y no pueden disparar alertas (evita "spike" inicial del LSTM).
+WARMUP_PREDS = int(os.getenv("WARMUP_PREDS", "32"))
+
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
 
 # Thread pool para operaciones bloqueantes (cv2, YOLO, Keras)
@@ -140,6 +144,7 @@ class CameraWorker:
         self.win_feats = deque(maxlen=SEQ_LEN)
         self.video_scores = deque(maxlen=VIDEO_MAX_SCORES)
         self.on_state = False
+        self.n_predictions = 0
         self.W: int = 0
         self.H: int = 0
 
@@ -183,15 +188,18 @@ class CameraWorker:
         if len(self.win_feats) == SEQ_LEN:
             Xw = np.stack(self.win_feats)
             p_win = predict_window(Xw, keras_model, mu, sd, lgbm=lgbm, fusion_w=FUSION_W, stacker=stacker)
-            self.video_scores.append(p_win)
-            p_vid = pool_scores(list(self.video_scores), pool=POOL_METHOD, topk_frac=TOPK_FRAC)
+            self.n_predictions += 1
+            if self.n_predictions > WARMUP_PREDS:
+                self.video_scores.append(p_win)
+                p_vid = pool_scores(list(self.video_scores), pool=POOL_METHOD, topk_frac=TOPK_FRAC)
 
         fired_alert = False
-        if not self.on_state and p_vid >= thr_on:
-            self.on_state = True
-            fired_alert = True
-        elif self.on_state and p_vid <= thr_off:
-            self.on_state = False
+        if self.n_predictions > WARMUP_PREDS:
+            if not self.on_state and p_vid >= thr_on:
+                self.on_state = True
+                fired_alert = True
+            elif self.on_state and p_vid <= thr_off:
+                self.on_state = False
 
         try:
             shown = res.plot() if DRAW_OVERLAY else frame
