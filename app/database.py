@@ -12,6 +12,13 @@ if DATABASE_URL.startswith("postgres://"):
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
+elif DATABASE_URL.startswith("postgresql"):
+    # Supabase y otros Postgres en la nube requieren SSL.
+    # Añadimos sslmode=require si no viene ya en la URL.
+    if "sslmode" not in DATABASE_URL:
+        sep = "&" if "?" in DATABASE_URL else "?"
+        DATABASE_URL = f"{DATABASE_URL}{sep}sslmode=require"
+    connect_args["connect_timeout"] = 10
 
 engine = create_engine(
     DATABASE_URL,
