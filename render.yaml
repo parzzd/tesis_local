@@ -10,12 +10,8 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: MODELS_DIR
-        value: models_mix2
-      - key: POSE_WEIGHTS
-        value: yolo11s-pose.pt
-      - key: FUSION_W
-        value: "0.50"
+      - key: INFERENCE_BASE_URL
+        sync: false
       - key: CORS_ORIGINS
         value: "*"
       - key: BOSS_CODE

@@ -201,6 +201,7 @@ const emailKey = 'sicher.email';
 const wsMap = new Map();
 let activeBigCam = null;
 const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
+const inferenceUrl = path => (window.sicherInferenceUrl ? window.sicherInferenceUrl(path) : path);
 const wsUrl = path => (window.sicherWsUrl ? window.sicherWsUrl(path) : path);
 function enqueueCamera(cam_id, pvid){
   // evitar duplicados
@@ -274,7 +275,7 @@ function restoreCamera(cam_id){
 =========================== */
 async function loadOverlay(){
   try {
-    const res = await fetch(apiUrl('/overlay/get'));
+    const res = await fetch(inferenceUrl('/overlay/get'));
     const data = await res.json();
     $('#chkOverlay').checked = data.overlay === true;
   } catch(e){
@@ -287,7 +288,7 @@ async function loadOverlay(){
 =========================== */
 async function setOverlay(){
   const val = $('#chkOverlay').checked;
-  await fetch(apiUrl('/overlay/set'), {
+  await fetch(inferenceUrl('/overlay/set'), {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ overlay: val })
@@ -340,7 +341,7 @@ function rowCam(cfg){
   div.innerHTML=`
     <div class="statusdot" id="dot-${cfg.cam_id}" style="background:#666"></div>
     <div style="flex:1"><b>${cfg.cam_id}</b> <span class="muted">${cfg.src}</span></div>
-    <button data-cam="${cfg.cam_id}" class="sec btnOpen" style="width:auto">Abrir</button>
+    <button data-cam="${cfg.cam_id}" data-src="${encodeURIComponent(cfg.src)}" class="sec btnOpen" style="width:auto">Abrir</button>
     <button data-cam="${cfg.cam_id}" class="sec btnClose" style="width:auto">Cerrar</button>
     <button data-cam="${cfg.cam_id}" class="sec btnDel" style="width:auto">Eliminar</button>
   `;
@@ -353,7 +354,7 @@ async function loadCameras(){
   const list = $('#camList'); 
   list.innerHTML='';
   cams.forEach(cfg=> list.appendChild(rowCam(cfg)));
-  list.querySelectorAll('.btnOpen').forEach(b=>b.onclick=()=>openWS(b.dataset.cam));
+  list.querySelectorAll('.btnOpen').forEach(b=>b.onclick=()=>openWS(b.dataset.cam, decodeURIComponent(b.dataset.src||'')));
   list.querySelectorAll('.btnClose').forEach(b=>b.onclick=()=>closeWS(b.dataset.cam));
   list.querySelectorAll('.btnDel').forEach(b=>b.onclick=()=>deleteCamera(b.dataset.cam));
 }
@@ -384,11 +385,12 @@ function camCard(cam_id){
   return card;
 }
 
-function openWS(cam_id){
+function openWS(cam_id, src){
   if(!document.getElementById(`card-${cam_id}`)) $('#camGrid').appendChild(camCard(cam_id));
   if(wsMap.has(cam_id)) return;
 
-  const url = wsUrl(`/ws/stream/${cam_id}`);
+  const qs = src ? `?src=${encodeURIComponent(src)}` : '';
+  const url = wsUrl(`/ws/stream/${encodeURIComponent(cam_id)}${qs}`);
   const ws = new WebSocket(url);
 
   ws.onopen = ()=>{

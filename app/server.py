@@ -1,21 +1,23 @@
 # uvicorn app.server:app --host 0.0.0.0 --port 8000
-import os, time, base64, asyncio, logging, threading
-from typing import Dict, Set
+#
+# Backend ligero (Render/Supabase):
+#   - Auth, usuarios, cámaras (metadatos), alertas, admin
+#   - Sirve el frontend estático
+#   - NO corre inferencia (eso vive en app/server_inference.py, desplegado en RunPod)
+#
+# El navegador abre el WebSocket directamente contra la URL de RunPod,
+# configurada vía INFERENCE_BASE_URL y expuesta al frontend en /config.js.
+
+import os
+import json
+import time
+import logging
+import threading
 from pathlib import Path
-from collections import deque
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor
-
-import numpy as np
-import cv2
-
-try:
-    cv2.setNumThreads(1)
-except Exception:
-    pass
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Body
+from fastapi import FastAPI, Depends
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,66 +28,32 @@ from app.models import User, AccessLog, CameraAction, AlertLog, Camera
 from app.schemas import (
     LoginRequest, RegisterRequest, CameraConfig, AlertDecision,
 )
-from app.utils import make_salt, hash_password, verify_password
+from app.utils import verify_password
 from app.crud import (
     create_user, get_user_by_email, add_access_log,
     add_camera_action, add_alert_log,
-)
-from app.pipeline import (
-    SEQ_LEN, pool_frame_to_51, frame_visible, pool_scores,
-    predict_window, load_artifacts,
 )
 
 load_dotenv()
 log = logging.getLogger("server")
 
 # ==========================================================
-# CONFIGURACIÓN (desde .env o valores por defecto)
+# CONFIGURACIÓN
 # ==========================================================
 ROOT_DIR   = Path(__file__).resolve().parent
 STATIC_DIR = (ROOT_DIR / "static").resolve()
-MODELS_DIR = Path(os.getenv("MODELS_DIR", "models_mix"))
-
-POSE_WEIGHTS = os.getenv("POSE_WEIGHTS", "yolo11s-pose.pt")
-IMGSZ, CONF_POSE, IOU_POSE = 640, 0.25, 0.50
-TOPK = 4
-
-CONF_MIN     = 0.10
-POOL_METHOD  = "topk"
-TOPK_FRAC    = 0.20
-FUSION_W     = float(os.getenv("FUSION_W", "0.50"))
-
-VIDEO_MAX_SCORES = 900
-DRAW_OVERLAY     = True
-
-LOG_RETENTION_DAYS = 7
 
 BOSS_CODE = os.getenv("BOSS_CODE", "20261")
-
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+
+# URL pública del servidor de inferencia (RunPod). Ej: https://abc-8000.proxy.runpod.net
+INFERENCE_BASE_URL = os.getenv("INFERENCE_BASE_URL", "").rstrip("/")
+
+LOG_RETENTION_DAYS = 7
 
 FAILED_ATTEMPTS: dict[str, dict] = {}
 MAX_ATTEMPTS       = 3
 BLOCK_TIME_MINUTES = 5
-
-# Thread pool para operaciones bloqueantes (cv2, YOLO, Keras)
-_executor = ThreadPoolExecutor(max_workers=2)
-
-# Modelos pesados: se cargan bajo demanda para dejar que Render abra el puerto.
-ARTIFACTS = None
-ARTIFACTS_LOCK = threading.Lock()
-
-
-def get_artifacts():
-    global ARTIFACTS
-    if ARTIFACTS is not None:
-        return ARTIFACTS
-
-    with ARTIFACTS_LOCK:
-        if ARTIFACTS is None:
-            log.info("Cargando modelos bajo demanda desde %s", MODELS_DIR)
-            ARTIFACTS = load_artifacts(MODELS_DIR, POSE_WEIGHTS)
-    return ARTIFACTS
 
 
 # ==========================================================
@@ -123,7 +91,7 @@ def get_db():
 # ==========================================================
 # APP
 # ==========================================================
-app = FastAPI(title="Sistema de Videovigilancia")
+app = FastAPI(title="Sistema de Videovigilancia - Backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -154,44 +122,43 @@ def login_fail_page():
     return FileResponse(STATIC_DIR / "login_fail.html")
 
 
+# ── Configuración inyectada al frontend ──────────────────
 @app.get("/config.js")
 def frontend_config():
-    return Response(
-        content="""
-window.SICHER_CONFIG = {
-  API_BASE_URL: "",
-  WS_BASE_URL: ""
-};
-window.sicherApiUrl = function(path) {
+    """
+    Expone al navegador:
+      - API_BASE_URL       -> este backend (Render, auth + DB + static)
+      - INFERENCE_BASE_URL -> servidor de inferencia (RunPod, /ws, /overlay)
+    """
+    cfg = {
+        "API_BASE_URL": "",
+        "INFERENCE_BASE_URL": INFERENCE_BASE_URL,
+    }
+    js = f"""
+window.SICHER_CONFIG = {json.dumps(cfg)};
+
+window.sicherApiUrl = function(path) {{
   const base = (window.SICHER_CONFIG && window.SICHER_CONFIG.API_BASE_URL) || "";
   return base ? base.replace(/\\/$/, "") + path : path;
-};
-window.sicherWsUrl = function(path) {
-  const config = window.SICHER_CONFIG || {};
-  const base = config.WS_BASE_URL || config.API_BASE_URL || "";
-  if (!base) {
+}};
+
+window.sicherInferenceUrl = function(path) {{
+  const base = (window.SICHER_CONFIG && window.SICHER_CONFIG.INFERENCE_BASE_URL) || "";
+  return base ? base.replace(/\\/$/, "") + path : path;
+}};
+
+window.sicherWsUrl = function(path) {{
+  const base = (window.SICHER_CONFIG && window.SICHER_CONFIG.INFERENCE_BASE_URL) || "";
+  if (!base) {{
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${proto}://${window.location.host}${path}`;
-  }
+    return `${{proto}}://${{window.location.host}}${{path}}`;
+  }}
   const url = new URL(base);
   const proto = url.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${url.host}${path}`;
-};
-""".strip(),
-        media_type="application/javascript",
-    )
-
-
-# ── Overlay toggle ────────────────────────────────────────
-@app.get("/overlay/get")
-def overlay_get():
-    return {"overlay": DRAW_OVERLAY}
-
-@app.post("/overlay/set")
-def overlay_set(payload: dict = Body(...)):
-    global DRAW_OVERLAY
-    DRAW_OVERLAY = bool(payload.get("overlay", True))
-    return {"ok": True, "overlay": DRAW_OVERLAY}
+  return `${{proto}}//${{url.host}}${{path}}`;
+}};
+""".strip()
+    return Response(content=js, media_type="application/javascript")
 
 
 # ── Auth ──────────────────────────────────────────────────
@@ -299,23 +266,16 @@ def clear_alert_logs(db: Session = Depends(get_db)):
 
 
 # ==========================================================
-# CÁMARAS  –  persistidas en DB, cargadas al inicio
+# CÁMARAS  –  persistidas en DB (Supabase)
 # ==========================================================
-def _load_cameras_from_db() -> Dict[str, CameraConfig]:
-    db = SessionLocal()
-    try:
-        rows = db.query(Camera).all()
-        return {r.cam_id: CameraConfig(cam_id=r.cam_id, src=r.src) for r in rows}
-    finally:
-        db.close()
-
-CAMERAS: Dict[str, CameraConfig] = _load_cameras_from_db()
+@app.get("/cameras")
+def list_cameras(db: Session = Depends(get_db)):
+    rows = db.query(Camera).all()
+    return [{"cam_id": r.cam_id, "src": r.src} for r in rows]
 
 
 @app.post("/cameras")
 def add_camera(cfg: CameraConfig, db: Session = Depends(get_db)):
-    CAMERAS[cfg.cam_id] = cfg
-
     existing = db.query(Camera).filter(Camera.cam_id == cfg.cam_id).first()
     if existing:
         existing.src = cfg.src
@@ -329,196 +289,10 @@ def add_camera(cfg: CameraConfig, db: Session = Depends(get_db)):
 
 @app.delete("/cameras/{cam_id}")
 def delete_camera(cam_id: str, db: Session = Depends(get_db)):
-    CAMERAS.pop(cam_id, None)
-
     db.query(Camera).filter(Camera.cam_id == cam_id).delete()
     db.commit()
-
-    # Detener worker si está corriendo
-    worker = WORKERS.pop(cam_id, None)
-    if worker:
-        worker.running = False
-
     add_camera_action(db, 1, cam_id, "delete")
     return {"ok": True}
-
-
-@app.get("/cameras")
-def list_cameras():
-    return list(CAMERAS.values())
-
-
-# ==========================================================
-# CAMERA WORKER  (WebSocket streaming + inferencia LSTM+LGBM)
-#
-# Las operaciones bloqueantes (cv2, YOLO, Keras) se ejecutan
-# en un ThreadPoolExecutor para NO bloquear el event loop.
-# ==========================================================
-class CameraWorker:
-    def __init__(self, cam_id: str, src: str):
-        self.cam_id = cam_id
-        self.src = src
-        self.clients: Set[WebSocket] = set()
-        self.running = False
-        self.task = None
-
-        self.win_feats = deque(maxlen=SEQ_LEN)
-        self.video_scores = deque(maxlen=VIDEO_MAX_SCORES)
-        self.on_state = False
-        self.W: int = 0
-        self.H: int = 0
-
-    async def start(self):
-        if not self.running:
-            self.running = True
-            self.task = asyncio.create_task(self._loop())
-
-    # ── Parte bloqueante (corre en thread) ────────────────
-    def _open_capture(self):
-        src = int(self.src) if self.src.isdigit() else self.src
-        cap = cv2.VideoCapture(src)
-        if not cap.isOpened():
-            return None
-        self.W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        return cap
-
-    def _grab_and_infer(self, cap) -> dict | None:
-        """Lee un frame, ejecuta YOLO + inferencia. Retorna dict o None si terminó."""
-        ok, frame = cap.read()
-        if not ok:
-            return None
-
-        keras_model, mu, sd, thr_on, thr_off, lgbm, pose, stacker = get_artifacts()
-
-        # Pose estimation
-        res = pose.predict(frame, imgsz=IMGSZ, conf=CONF_POSE, iou=IOU_POSE, verbose=False)[0]
-
-        kps_f = None
-        if res.keypoints is not None and res.keypoints.xy.shape[0] > 0:
-            xy = res.keypoints.xy.cpu().numpy()
-            c  = res.keypoints.conf.cpu().numpy()
-            order = np.argsort(-c.mean(axis=1))
-            P = min(len(order), TOPK)
-            xy, c = xy[order[:P]], c[order[:P]]
-            kps_f = np.concatenate([xy, c[..., None]], axis=-1).astype(np.float32)
-
-        # Features
-        feat51 = pool_frame_to_51(kps_f, self.W, self.H)
-        self.win_feats.append(feat51)
-
-        p_win, p_vid = 0.0, 0.0
-
-        if len(self.win_feats) == SEQ_LEN:
-            Xw = np.stack(self.win_feats)
-            p_win = predict_window(Xw, keras_model, mu, sd, lgbm=lgbm, fusion_w=FUSION_W, stacker=stacker)
-            self.video_scores.append(p_win)
-            p_vid = pool_scores(list(self.video_scores), pool=POOL_METHOD, topk_frac=TOPK_FRAC)
-
-        # Histéresis
-        fired_alert = False
-        if not self.on_state and p_vid >= thr_on:
-            self.on_state = True
-            fired_alert = True
-        elif self.on_state and p_vid <= thr_off:
-            self.on_state = False
-
-        # Render JPEG
-        try:
-            shown = res.plot() if DRAW_OVERLAY else frame
-        except Exception:
-            shown = frame
-        _, buf = cv2.imencode(".jpg", shown, [cv2.IMWRITE_JPEG_QUALITY, 65])
-        jpg = base64.b64encode(buf).decode()
-
-        now = time.time()
-        return {
-            "p_win": p_win,
-            "p_vid": p_vid,
-            "on": self.on_state,
-            "ts": now,
-            "jpg_b64": jpg,
-            "fired_alert": fired_alert,
-        }
-
-    # ── Loop async (delega al thread pool) ────────────────
-    async def _loop(self):
-        loop = asyncio.get_event_loop()
-
-        cap = await loop.run_in_executor(_executor, self._open_capture)
-        if cap is None:
-            await self._broadcast({"type": "error", "msg": "No se pudo abrir la fuente de video"})
-            self.running = False
-            return
-
-        try:
-            while self.running and self.clients:
-                result = await loop.run_in_executor(_executor, self._grab_and_infer, cap)
-                if result is None:
-                    await self._broadcast({"type": "error", "msg": "Fin del stream"})
-                    break
-
-                if result["fired_alert"]:
-                    await self._broadcast({
-                        "type": "alert",
-                        "cam_id": self.cam_id,
-                        "prob": result["p_vid"],
-                        "ts": result["ts"],
-                    })
-
-                await self._broadcast({
-                    "type": "frame",
-                    "cam_id": self.cam_id,
-                    "p_win": result["p_win"],
-                    "p_vid": result["p_vid"],
-                    "on": result["on"],
-                    "ts": result["ts"],
-                    "jpg_b64": result["jpg_b64"],
-                })
-
-                await asyncio.sleep(0.001)
-        finally:
-            await loop.run_in_executor(_executor, cap.release)
-            self.running = False
-
-    async def _broadcast(self, msg: dict):
-        dead = []
-        for ws in list(self.clients):
-            try:
-                await ws.send_json(msg)
-            except Exception:
-                dead.append(ws)
-        for ws in dead:
-            self.clients.discard(ws)
-
-
-# ── WebSocket endpoint ────────────────────────────────────
-WORKERS: Dict[str, CameraWorker] = {}
-
-
-@app.websocket("/ws/stream/{cam_id}")
-async def ws_stream(ws: WebSocket, cam_id: str):
-    await ws.accept()
-
-    if cam_id not in CAMERAS:
-        await ws.send_json({"type": "error", "msg": "cam-not-found"})
-        await ws.close()
-        return
-
-    worker = WORKERS.get(cam_id)
-    if not worker or not worker.running:
-        worker = CameraWorker(cam_id, CAMERAS[cam_id].src)
-        WORKERS[cam_id] = worker
-        await worker.start()
-
-    worker.clients.add(ws)
-    try:
-        while True:
-            await ws.receive_text()
-    except WebSocketDisconnect:
-        worker.clients.discard(ws)
-        # Si no quedan clientes, el worker se detiene solo
-        # (la condición `self.clients` en _loop se encarga)
 
 
 # ── Alertas (aceptar/rechazar) ────────────────────────────

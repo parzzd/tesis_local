@@ -1,18 +1,5 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-
 fastapi
 uvicorn[standard]
-websockets
 python-dotenv
 sqlalchemy
 psycopg2-binary
-numpy
-opencv-python-headless
-joblib
-keras==3.12.0
-tensorflow-cpu
-lightgbm
-scikit-learn
-ultralytics==8.4.33
-torch==2.5.1+cpu
-torchvision==0.20.1+cpu

@@ -1,0 +1,16 @@
+# Dependencias del servidor de inferencia (RunPod con GPU).
+# En RunPod usa una imagen base que ya traiga torch+CUDA (p.ej.
+# runpod/pytorch:2.5.1-py3.11-cuda12.1), así no re-descargas torch.
+
+fastapi
+uvicorn[standard]
+websockets
+python-dotenv
+numpy
+opencv-python-headless
+joblib
+keras==3.12.0
+tensorflow
+lightgbm
+scikit-learn
+ultralytics==8.4.33

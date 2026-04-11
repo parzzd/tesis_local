@@ -32,19 +32,14 @@ out_npz_fall/
 out_npz_video/
 data/
 
-# Keep only the runtime model artifacts from models_mix2
+# Los modelos NO van en Render (se usan sólo en RunPod)
 models_mix/
+models_mix2/
 models_mix3/
-models_mix2/*
-!models_mix2/lgbm_model.pkl
-!models_mix2/stacker.pkl
-!models_mix2/mix_cnn_lstm_T32_F51.keras
-!models_mix2/mix_cnn_lstm_T32_F51_norm_stats.npz
-!models_mix2/mix_cnn_lstm_T32_F51_threshold.json
-
-# Keep only the runtime pose model
 yolo*.pt
-!yolo11s-pose.pt
+*.keras
+*.pkl
+*.npz
 
 # Frontend build output is created for Vercel, not needed in Docker
 app/static/config.js
