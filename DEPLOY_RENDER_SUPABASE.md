@@ -34,6 +34,6 @@ DATABASE_URL=postgresql://postgres:TU_PASSWORD@db.TU-PROYECTO.supabase.co:5432/p
 - En Vercel usa `Static Site` u `Other`, no `FastAPI`.
 - Root directory: `.`.
 - Build command: `npm run build`.
-- Output directory: `app/static`.
+- Output directory: `static`.
 - Variable de entorno: `API_BASE_URL` con la URL publica de Render, por ejemplo `https://tu-backend.onrender.com`.
 - Si cambias `API_BASE_URL`, vuelve a desplegar Vercel para regenerar `config.js`.

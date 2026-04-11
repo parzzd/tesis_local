@@ -1,7 +1,8 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const staticDir = path.resolve("app/static");
+const sourceStaticDir = path.resolve("app/static");
+const outputStaticDir = path.resolve("static");
 
 const apiBase = (process.env.API_BASE_URL || process.env.BACKEND_URL || "").trim();
 const wsBase = (process.env.WS_BASE_URL || "").trim();
@@ -31,8 +32,9 @@ const content = [
   "",
 ].join("\n");
 
-await mkdir(staticDir, { recursive: true });
-await writeFile(path.join(staticDir, "config.js"), content, "utf8");
+await rm(outputStaticDir, { recursive: true, force: true });
+await cp(sourceStaticDir, outputStaticDir, { recursive: true });
+await writeFile(path.join(outputStaticDir, "config.js"), content, "utf8");
 
 if (!apiBase) {
   console.warn("API_BASE_URL is empty; frontend will fall back to same-origin requests.");
