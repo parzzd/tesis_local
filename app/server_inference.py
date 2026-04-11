@@ -28,13 +28,16 @@ try:
 except Exception:
     pass
 
-# Evitar que TF pre-aloque toda la VRAM (~90%). Solo usa lo que el modelo necesita.
+# Keras/TF en CPU (modelo LSTM pequeno). YOLO sigue en GPU via torch.
+# Evita pelear con cuDNN (TF 2.21 bundled libs chocan con OpenCV ffmpeg)
+# y libera VRAM para YOLO. IMPORTANTE: cv2 debe importarse ANTES que TF
+# o cv2.VideoCapture segfaultea por conflicto de abseil/protobuf.
 try:
     import tensorflow as tf
-    for gpu in tf.config.list_physical_devices("GPU"):
-        tf.config.experimental.set_memory_growth(gpu, True)
+    tf.config.set_visible_devices([], "GPU")
+    print("[BOOT] TF forzado a CPU")
 except Exception as e:
-    print(f"[BOOT] No se pudo activar memory_growth de TF: {e}")
+    print(f"[BOOT] No se pudo forzar TF a CPU: {e}")
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body
