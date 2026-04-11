@@ -1,6 +1,7 @@
 # app/schemas.py  –  Pydantic schemas (request / response)
+from typing import Literal, Optional
+
 from pydantic import BaseModel
-from typing import Optional
 
 
 class LoginRequest(BaseModel):
@@ -18,12 +19,17 @@ class RegisterRequest(BaseModel):
 
 
 class CameraConfig(BaseModel):
-    cam_id: str
+    serial_number: str
     src: str
+    location_description: Optional[str] = ""
+    is_active: Optional[bool] = True
 
 
 class AlertDecision(BaseModel):
-    cam_id: str
+    serial_number: str
     prob: float
     timestamp: float
-    accepted: bool
+    accepted: Optional[bool] = None
+    status: Optional[Literal["pending", "true_positive", "false_positive"]] = None
+    evidence_path: Optional[str] = None
+    reviewer_email: Optional[str] = None

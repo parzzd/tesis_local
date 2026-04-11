@@ -3,134 +3,94 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sicher – Monitoreo AI</title>
+  <title>Sicher - Monitoreo AI</title>
   <style>
     :root{--bg:#0b0f17;--panel:#121826;--muted:#a9b1bd;--txt:#e6edf3;--ok:#18a558;--warn:#f2a900;--alert:#ff4757;--card:#0f1522}
-    *{box-sizing:border-box} 
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Helvetica,Arial;background:var(--bg);color:var(--txt)}
-    header{padding:16px 20px;border-bottom:1px solid #1e2636;display:flex;align-items:center;gap:16px}
-    header h1{font-size:18px;margin:0} 
+    *{box-sizing:border-box}
+    html, body{height:100%;margin:0}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Helvetica,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;min-height:100vh}
+    header{padding:16px 20px;border-bottom:1px solid #1e2636;display:flex;align-items:center;gap:12px}
+    header h1{font-size:18px;margin:0}
     header .sp{flex:1}
-    main{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px;flex: 1;}
+
+    main{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px;flex:1}
     .panel{background:var(--panel);border:1px solid #1f293b;border-radius:14px;padding:16px}
+
     label{display:block;margin:8px 0 6px;color:var(--muted);font-size:13px}
-    input,button,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #263248;background:#0e1421;color:var(--txt)}
-    button{cursor:pointer;background:#1b3ea6;border-color:#1b3ea6} 
-    button:hover{filter:brightness(1.06)} 
+    input,button,select{width:100%;min-height:44px;padding:11px 12px;border-radius:10px;border:1px solid #263248;background:#0e1421;color:var(--txt)}
+    button{cursor:pointer;background:#1b3ea6;border-color:#1b3ea6}
+    button:hover{filter:brightness(1.06)}
     button.sec{background:#24314a;border-color:#2c3d59}
-    .row{display:flex;gap:8px} 
+
+    .row{display:flex;gap:8px}
     .row>*{flex:1}
-    .muted{color:var(--muted)} 
-    .ok{color:var(--ok)} 
-    .alert{color:var(--alert)} 
+
+    .muted{color:var(--muted)}
+    .ok{color:var(--ok)}
+    .alert{color:var(--alert)}
     .warn{color:var(--warn)}
+
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
     .camcard{background:var(--card);border:1px solid #1c2436;border-radius:14px;overflow:hidden}
     .camhead{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #1e2636}
-    .camhead h3{margin:0;font-size:14px} 
+    .camhead h3{margin:0;font-size:14px}
     .cammeta{font-size:12px;color:var(--muted)}
     .frame{aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center}
-    .stats{display:flex;gap:12px;padding:8px 12px;font-size:13px;border-top:1px solid #1e2636}
+    .stats{display:flex;gap:12px;padding:8px 12px;font-size:13px;border-top:1px solid #1e2636;flex-wrap:wrap}
+
     .alerts{max-height:260px;overflow:auto;border:1px solid #1e2636;border-radius:10px}
-    .alertrow{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid #1e2636}
+    .alertrow{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #1e2636}
     .statusdot{width:8px;height:8px;border-radius:50%}
-    .switchWrap{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      cursor:pointer;
-      user-select:none;
-    }
-    
-    .switchWrap input{
-      display:none;
-    }
-    
-    .switch{
-      width:48px;
-      height:26px;
-      background:#555;
-      border-radius:30px;
-      position:relative;
-      transition:background .25s;
-    }
-    
-    .switch::after{
-      content:"";
-      width:22px;
-      height:22px;
-      background:white;
-      border-radius:50%;
-      position:absolute;
-      top:2px;
-      left:2px;
-      transition:left .25s;
-      box-shadow:0 2px 6px rgba(0,0,0,.25);
-    }
-    
-    .switchWrap input:checked + .switch{
-      background:#1b8cff;
-    }
-    
-    .switchWrap input:checked + .switch::after{
-      left:24px;
-    }
-    .switchText{
-      font-size:14px;
-      color:#a9b1bd;
-    }
-    
-    footer {
-      background-color: #111;
-      color: #eee;
-      text-align: center;
-      padding: 10px 0;
-      font-size: 0.9rem;
-    }
-    html, body {
-      height: 100%;
-      margin: 0;
-    }
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-        /* Cámara destacada (alerta) */
-    .camcard.bigCam {
-      grid-column: 1 / -1;
-      width: 100%;
-      transform: scale(1.0);
-      border: 2px solid #ff4757;
-    }
 
-    .bigCam .frame {
-      object-fit: cover !important;
-    }
+    .cam-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .cam-actions button{width:auto;min-width:88px}
 
-    #camGrid.smallLayout .camcard:not(.bigCam) {
-      max-width: 360px;
-    }
+    .switchWrap{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+    .switchWrap input{display:none}
+    .switch{width:48px;height:26px;background:#555;border-radius:30px;position:relative;transition:background .25s}
+    .switch::after{content:"";width:22px;height:22px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .25s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+    .switchWrap input:checked + .switch{background:#1b8cff}
+    .switchWrap input:checked + .switch::after{left:24px}
+    .switchText{font-size:14px;color:#a9b1bd}
 
+    .camcard.bigCam{grid-column:1 / -1;width:100%;border:2px solid #ff4757}
+    .bigCam .frame{object-fit:cover !important}
+    #camGrid.smallLayout .camcard:not(.bigCam){max-width:360px}
+
+    footer{background-color:#111;color:#eee;text-align:center;padding:10px 0;font-size:.9rem}
+
+    @media (max-width: 768px) {
+      main{grid-template-columns:1fr;padding:12px}
+      header{padding:12px;flex-wrap:wrap;align-items:flex-start}
+      header h1{width:100%;font-size:17px}
+      #btnLogout{width:100% !important}
+      .row{flex-direction:column}
+      .grid{grid-template-columns:1fr}
+      .alerts{max-height:none}
+      .alertrow{flex-wrap:wrap;align-items:flex-start}
+      .cam-actions{width:100%}
+      .cam-actions button{flex:1;min-width:0}
+      .action-btn{flex:1}
+    }
   </style>
   <script src="/config.js"></script>
 </head>
 <body>
 <header>
-  <h1>📹 Sistema de Videovigilancia</h1>
+  <h1>Sistema de Videovigilancia</h1>
   <div class="sp"></div>
-  <div id="who" class="muted">—</div>
-  <button id="btnLogout" class="sec" style="width:auto">Cerrar sesión</button>
+  <div id="who" class="muted">-</div>
+  <button id="btnLogout" class="sec" style="width:auto">Cerrar sesion</button>
 </header>
 
 <main>
   <section class="panel" id="left">
-    <h2 style="margin-top:0">Registrar cámara</h2>
+    <h2 style="margin-top:0">Registrar camara</h2>
 
     <div class="row">
       <div>
-        <label>ID</label>
-        <input id="cam_id" placeholder="lobby-1" />
+        <label>Serial</label>
+        <input id="cam_serial" placeholder="SN-LOBBY-001" />
       </div>
       <div>
         <label>Fuente</label>
@@ -138,46 +98,43 @@
       </div>
     </div>
 
+    <div>
+      <label>Ubicacion</label>
+      <input id="cam_location" placeholder="Lobby principal - puerta norte" />
+    </div>
+
     <div class="row" style="margin-top:10px">
       <button id="btnAdd">Agregar/Actualizar</button>
     </div>
 
-    <h3 style="margin:14px 0 6px">Cámaras registradas</h3>
+    <h3 style="margin:14px 0 6px">Camaras registradas</h3>
     <div id="camList" class="alerts"></div>
 
     <hr style="margin:16px 0;border-color:#1e2636" />
 
-<!-- === OPCIONES DEL SISTEMA === -->
-<div class="card" style="
-  padding:14px;
-  margin-bottom:20px;
-  border:1px solid #1f293b;
-  background:#0f1522;
-  border-radius:12px;
-">
-  <h3 style="margin:0 0 10px;">Opciones del Sistema</h3>
+    <div class="card" style="padding:14px;margin-bottom:20px;border:1px solid #1f293b;background:#0f1522;border-radius:12px;">
+      <h3 style="margin:0 0 10px;">Opciones del Sistema</h3>
 
-  <label class="switchWrap">
-    <input type="checkbox" id="chkOverlay">
-    <span class="switch"></span>
-    <span class="switchText">Mostrar esqueleto</span>
-  </label>
+      <label class="switchWrap">
+        <input type="checkbox" id="chkOverlay">
+        <span class="switch"></span>
+        <span class="switchText">Mostrar esqueleto</span>
+      </label>
 
-  <div style="margin-top:14px;">
-    <label style="display:flex;align-items:center;gap:10px;font-size:13px;">
-      <span style="min-width:110px;">Sensibilidad alerta</span>
-      <input type="range" id="rngThrOn" min="0.10" max="0.95" step="0.01" value="0.65" style="flex:1;">
-      <span id="lblThrOn" style="min-width:42px;text-align:right;font-variant-numeric:tabular-nums;">0.65</span>
-    </label>
-    <div style="font-size:11px;color:#7a8599;margin-top:4px;">
-      Mayor valor = menos falsos positivos. THR_OFF = THR_ON − 0.15.
+      <div style="margin-top:14px;">
+        <label style="display:flex;align-items:center;gap:10px;font-size:13px;">
+          <span style="min-width:110px;">Sensibilidad alerta</span>
+          <input type="range" id="rngThrOn" min="0.10" max="0.95" step="0.01" value="0.65" style="flex:1;min-height:44px;">
+          <span id="lblThrOn" style="min-width:42px;text-align:right;font-variant-numeric:tabular-nums;">0.65</span>
+        </label>
+        <div style="font-size:11px;color:#7a8599;margin-top:4px;">
+          Mayor valor = menos falsos positivos. THR_OFF = THR_ON - 0.15.
+        </div>
+      </div>
     </div>
-  </div>
 
-</div>
-
-<h2>Alertas</h2>
-<div id="alerts" class="alerts"></div>
+    <h2>Alertas</h2>
+    <div id="alerts" class="alerts"></div>
   </section>
 
   <section class="panel" id="right">
@@ -190,18 +147,11 @@
 </main>
 
 <footer>
-  <p>Proyecto de tesis enfocado en la detección de acciones anomalas en video</p>
+  <p>Proyecto de tesis enfocado en la deteccion de acciones anomalas en video</p>
   <p>Propiedad de: Pedro Retuerto Diaz</p>
 </footer>
 
 <script>
-  console.log("DEBUG who:", {
-    nombre: localStorage.getItem('sicher.nombre'),
-    apellido: localStorage.getItem('sicher.apellido'),
-    cargo: localStorage.getItem('sicher.charge'),
-    token: localStorage.getItem('sicher.token')
-  });
-  
 const alertQueue = [];
 let showingCam = null;
 let switching = false;
@@ -210,99 +160,100 @@ const $ = s => document.querySelector(s);
 const tokenKey = 'sicher.token';
 const emailKey = 'sicher.email';
 const wsMap = new Map();
+const cameraMeta = new Map();
 let activeBigCam = null;
+
 const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
 const inferenceUrl = path => (window.sicherInferenceUrl ? window.sicherInferenceUrl(path) : path);
 const wsUrl = path => (window.sicherWsUrl ? window.sicherWsUrl(path) : path);
-function enqueueCamera(cam_id, pvid){
-  // evitar duplicados
-  if(!alertQueue.some(c => c.cam_id === cam_id)){
-      alertQueue.push({ cam_id, pvid });
+
+const toDomKey = value => String(value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+const domId = (prefix, serialNumber) => `${prefix}-${toDomKey(serialNumber)}`;
+
+function authHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const email = localStorage.getItem(emailKey);
+  const userId = localStorage.getItem('sicher.user_id');
+  if (email) headers['X-User-Email'] = email;
+  if (userId) headers['X-User-Id'] = userId;
+  return headers;
+}
+
+function enqueueCamera(serialNumber, pvid) {
+  if (!alertQueue.some(c => c.serial_number === serialNumber)) {
+    alertQueue.push({ serial_number: serialNumber, pvid });
   }
 }
-async function processQueue(){
-  if (switching) return; // ya se está mostrando una
+
+async function processQueue() {
+  if (switching) return;
   if (alertQueue.length === 0) return;
 
   switching = true;
-
-  // ordenar por probabilidad, mayor primero
-  alertQueue.sort((a,b)=> b.pvid - a.pvid);
+  alertQueue.sort((a, b) => b.pvid - a.pvid);
 
   const next = alertQueue.shift();
-  showingCam = next.cam_id;
+  showingCam = next.serial_number;
 
   highlightCamera(showingCam);
-
-  // mostrarla durante 5 segundos
   await new Promise(res => setTimeout(res, 5000));
 
   restoreCamera(showingCam);
   showingCam = null;
   switching = false;
-
-  // continuar si hay más
   processQueue();
 }
 
-function highlightCamera(cam_id){
+function highlightCamera(serialNumber) {
   const grid = $('#camGrid');
-  const card = document.getElementById(`card-${cam_id}`);
-  if(!card) return;
+  const card = document.getElementById(domId('card', serialNumber));
+  if (!card) return;
 
-  // remover la anterior
-  if(activeBigCam && activeBigCam !== cam_id){
-    const prev = document.getElementById(`card-${activeBigCam}`);
-    if(prev) prev.classList.remove('bigCam');
+  if (activeBigCam && activeBigCam !== serialNumber) {
+    const prev = document.getElementById(domId('card', activeBigCam));
+    if (prev) prev.classList.remove('bigCam');
   }
 
-  activeBigCam = cam_id;
-
-  // mover al inicio
+  activeBigCam = serialNumber;
   grid.prepend(card);
-
-  // marcar como grande
-  card.classList.add("bigCam");
-
-  // activar layout pequeño para las demás
-  grid.classList.add("smallLayout");
+  card.classList.add('bigCam');
+  grid.classList.add('smallLayout');
 }
 
-function restoreCamera(cam_id){
-  const card = document.getElementById(`card-${cam_id}`);
-  if(!card) return;
+function restoreCamera(serialNumber) {
+  const card = document.getElementById(domId('card', serialNumber));
+  if (!card) return;
 
-  card.classList.remove("bigCam");
+  card.classList.remove('bigCam');
 
-  // si ninguna está en alerta, restaurar layout
-  if(activeBigCam === cam_id){
+  if (activeBigCam === serialNumber) {
     activeBigCam = null;
-    $('#camGrid').classList.remove("smallLayout");
+    $('#camGrid').classList.remove('smallLayout');
   }
 }
 
 /* ===========================
    OVERLAY: CARGAR ESTADO
 =========================== */
-async function loadOverlay(){
+async function loadOverlay() {
   try {
     const res = await fetch(inferenceUrl('/overlay/get'));
     const data = await res.json();
     $('#chkOverlay').checked = data.overlay === true;
-  } catch(e){
-    console.warn("No se pudo cargar overlay:", e);
+  } catch (e) {
+    console.warn('No se pudo cargar overlay:', e);
   }
 }
 
 /* ===========================
    OVERLAY: CAMBIAR ESTADO
 =========================== */
-async function setOverlay(){
+async function setOverlay() {
   const val = $('#chkOverlay').checked;
   await fetch(inferenceUrl('/overlay/set'), {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ overlay: val })
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ overlay: val })
   });
 }
 
@@ -313,33 +264,33 @@ $('#chkOverlay').addEventListener('change', setOverlay);
 =========================== */
 const THR_HYST_GAP = 0.15;
 
-async function loadThreshold(){
+async function loadThreshold() {
   try {
     const res = await fetch(inferenceUrl('/threshold/get'));
     const data = await res.json();
     const thrOn = (data.thr_on_override ?? data.thr_on_model ?? 0.65);
     $('#rngThrOn').value = thrOn;
     $('#lblThrOn').textContent = Number(thrOn).toFixed(2);
-  } catch(e){
-    console.warn("No se pudo cargar threshold:", e);
+  } catch (e) {
+    console.warn('No se pudo cargar threshold:', e);
   }
 }
 
 let thrSaveTimer = null;
-async function setThreshold(){
-  const thrOn  = parseFloat($('#rngThrOn').value);
+async function setThreshold() {
+  const thrOn = parseFloat($('#rngThrOn').value);
   const thrOff = Math.max(0, thrOn - THR_HYST_GAP);
   $('#lblThrOn').textContent = thrOn.toFixed(2);
   clearTimeout(thrSaveTimer);
   thrSaveTimer = setTimeout(async () => {
     try {
       await fetch(inferenceUrl('/threshold/set'), {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thr_on: thrOn, thr_off: thrOff })
       });
-    } catch(e){
-      console.warn("No se pudo guardar threshold:", e);
+    } catch (e) {
+      console.warn('No se pudo guardar threshold:', e);
     }
   }, 200);
 }
@@ -347,230 +298,339 @@ async function setThreshold(){
 $('#rngThrOn').addEventListener('input', setThreshold);
 
 /* ===========================
-    SESIÓN
+    SESION
 =========================== */
 function setWho() {
   const nombre = localStorage.getItem('sicher.nombre');
   const apellido = localStorage.getItem('sicher.apellido');
-  if (nombre && apellido)
-      $('#who').innerHTML = `Bienvenido: <b>${nombre} ${apellido}</b>`;
-  else
-      $('#who').innerHTML = 'No autenticado';
+  const role = localStorage.getItem('sicher.role') || localStorage.getItem('sicher.charge') || '-';
+
+  if (nombre && apellido) {
+    $('#who').innerHTML = `Bienvenido: <b>${nombre} ${apellido}</b> (${role})`;
+  } else {
+    $('#who').innerHTML = 'No autenticado';
+  }
 }
 
-function logout(){
+function logout() {
   localStorage.removeItem(tokenKey);
   localStorage.removeItem(emailKey);
+  localStorage.removeItem('sicher.nombre');
+  localStorage.removeItem('sicher.apellido');
+  localStorage.removeItem('sicher.role');
+  localStorage.removeItem('sicher.charge');
+  localStorage.removeItem('sicher.user_id');
   window.location.href = '/';
 }
 
 /* ===========================
    CAMERAS CRUD
 =========================== */
-async function addCamera(){
-  const cam_id = $('#cam_id').value.trim();
+async function addCamera() {
+  const serial_number = $('#cam_serial').value.trim();
   const src = $('#cam_src').value.trim();
-  if(!cam_id || !src) return alert('Completa cam_id y src');
-  const res = await fetch(apiUrl("/cameras"),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cam_id,src})});
-  if(!res.ok){ alert('No se pudo registrar'); return; }
-  await loadCameras();
-}
+  const location_description = $('#cam_location').value.trim();
 
-async function deleteCamera(cam_id){
-  closeWS(cam_id);
-  await fetch(apiUrl("/cameras/"+encodeURIComponent(cam_id)),{
-    method:'DELETE'
+  if (!serial_number || !src) return alert('Completa serial y fuente');
+
+  const res = await fetch(apiUrl('/cameras'), {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ serial_number, src, location_description })
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || 'No se pudo registrar la camara');
+    return;
+  }
+
+  $('#cam_serial').value = '';
+  $('#cam_src').value = '';
+  $('#cam_location').value = '';
+
   await loadCameras();
 }
 
-function rowCam(cfg){
-  const div=document.createElement('div');
-  div.className='alertrow';
-  div.innerHTML=`
-    <div class="statusdot" id="dot-${cfg.cam_id}" style="background:#666"></div>
-    <div style="flex:1"><b>${cfg.cam_id}</b> <span class="muted">${cfg.src}</span></div>
-    <button data-cam="${cfg.cam_id}" data-src="${encodeURIComponent(cfg.src)}" class="sec btnOpen" style="width:auto">Abrir</button>
-    <button data-cam="${cfg.cam_id}" class="sec btnClose" style="width:auto">Cerrar</button>
-    <button data-cam="${cfg.cam_id}" class="sec btnDel" style="width:auto">Eliminar</button>
+async function deleteCamera(serialNumber) {
+  closeWS(serialNumber);
+
+  const headers = {};
+  const email = localStorage.getItem(emailKey);
+  const userId = localStorage.getItem('sicher.user_id');
+  if (email) headers['X-User-Email'] = email;
+  if (userId) headers['X-User-Id'] = userId;
+
+  await fetch(apiUrl('/cameras/' + encodeURIComponent(serialNumber)), {
+    method: 'DELETE',
+    headers
+  });
+
+  await loadCameras();
+}
+
+function rowCam(cfg) {
+  const serial = cfg.serial_number || cfg.cam_id;
+  const location = cfg.location_description || 'Sin ubicacion';
+  const div = document.createElement('div');
+  div.className = 'alertrow';
+  div.innerHTML = `
+    <div class="statusdot" id="${domId('dot', serial)}" style="background:#666"></div>
+    <div style="flex:1;min-width:180px">
+      <b>${serial}</b>
+      <div class="muted">${location}</div>
+      <div class="muted">${cfg.src}</div>
+    </div>
+    <div class="cam-actions">
+      <button data-serial="${serial}" data-src="${encodeURIComponent(cfg.src)}" data-loc="${encodeURIComponent(location)}" class="sec btnOpen">Abrir</button>
+      <button data-serial="${serial}" class="sec btnClose">Cerrar</button>
+      <button data-serial="${serial}" class="sec btnDel">Eliminar</button>
+    </div>
   `;
   return div;
 }
 
-async function loadCameras(){
-  const res = await fetch(apiUrl("/cameras"));
+async function loadCameras() {
+  const res = await fetch(apiUrl('/cameras'));
   const cams = await res.json();
-  const list = $('#camList'); 
-  list.innerHTML='';
-  cams.forEach(cfg=> list.appendChild(rowCam(cfg)));
-  list.querySelectorAll('.btnOpen').forEach(b=>b.onclick=()=>openWS(b.dataset.cam, decodeURIComponent(b.dataset.src||'')));
-  list.querySelectorAll('.btnClose').forEach(b=>b.onclick=()=>closeWS(b.dataset.cam));
-  list.querySelectorAll('.btnDel').forEach(b=>b.onclick=()=>deleteCamera(b.dataset.cam));
+
+  cameraMeta.clear();
+
+  const list = $('#camList');
+  list.innerHTML = '';
+
+  cams.forEach(cfg => {
+    const serial = cfg.serial_number || cfg.cam_id;
+    if (!serial) return;
+    cameraMeta.set(serial, cfg);
+    list.appendChild(rowCam(cfg));
+  });
+
+  list.querySelectorAll('.btnOpen').forEach(b => {
+    b.onclick = () => openWS(
+      b.dataset.serial,
+      decodeURIComponent(b.dataset.src || ''),
+      decodeURIComponent(b.dataset.loc || '')
+    );
+  });
+  list.querySelectorAll('.btnClose').forEach(b => {
+    b.onclick = () => closeWS(b.dataset.serial);
+  });
+  list.querySelectorAll('.btnDel').forEach(b => {
+    b.onclick = () => deleteCamera(b.dataset.serial);
+  });
 }
 
 /* ===========================
     WEBSOCKET STREAM
 =========================== */
-function camCard(cam_id){
-  const card=document.createElement('div');
-  card.className='camcard';
-  card.id=`card-${cam_id}`;
-  card.innerHTML=`
+function camCard(serialNumber, locationDescription = '') {
+  const key = toDomKey(serialNumber);
+  const card = document.createElement('div');
+  card.className = 'camcard';
+  card.id = `card-${key}`;
+  card.innerHTML = `
     <div class="camhead">
       <div>
-        <h3>${cam_id}</h3>
-        <div class="cammeta"><span id="meta-${cam_id}">p_win: 0.000 · p_vid: 0.000</span></div>
+        <h3>${serialNumber}</h3>
+        <div class="cammeta">${locationDescription || 'Sin ubicacion'} · <span id="meta-${key}">p_win: 0.000 · p_vid: 0.000</span></div>
       </div>
     </div>
     <div class="frame">
-      <img id="img-${cam_id}" style="width:100%;height:100%;object-fit:contain"/>
+      <img id="img-${key}" style="width:100%;height:100%;object-fit:contain"/>
     </div>
     <div class="stats">
-      <div>TS: <span id="ts-${cam_id}" class="muted">—</span></div>
-      <div>Estado: <b id="state-${cam_id}" class="ok">OK</b></div>
-      <div>Prob: <b id="prob-${cam_id}" class="muted">0.000</b></div>
+      <div>TS: <span id="ts-${key}" class="muted">-</span></div>
+      <div>Estado: <b id="state-${key}" class="ok">OK</b></div>
+      <div>Prob: <b id="prob-${key}" class="muted">0.000</b></div>
     </div>
   `;
   return card;
 }
 
-function openWS(cam_id, src){
-  if(!document.getElementById(`card-${cam_id}`)) $('#camGrid').appendChild(camCard(cam_id));
-  if(wsMap.has(cam_id)) return;
+function openWS(serialNumber, src, locationDescription = '') {
+  if (!serialNumber) return;
+
+  const cardId = domId('card', serialNumber);
+  if (!document.getElementById(cardId)) {
+    $('#camGrid').appendChild(camCard(serialNumber, locationDescription));
+  }
+
+  if (wsMap.has(serialNumber)) return;
 
   const qs = src ? `?src=${encodeURIComponent(src)}` : '';
-  const url = wsUrl(`/ws/stream/${encodeURIComponent(cam_id)}${qs}`);
+  const url = wsUrl(`/ws/stream/${encodeURIComponent(serialNumber)}${qs}`);
   const ws = new WebSocket(url);
 
-  ws.onopen = ()=>{
-    $('#srv').textContent=url;
-    setDot(cam_id, '#18a558');
+  ws.onopen = () => {
+    const srv = $('#srv');
+    if (srv) srv.textContent = url;
+    setDot(serialNumber, '#18a558');
   };
-  ws.onclose = ()=>{
-    setDot(cam_id, '#666'); 
-    wsMap.delete(cam_id);
-  };
-  ws.onerror = ()=> setDot(cam_id, '#ff4757');
 
-  ws.onmessage = (ev)=>{
-    try{
+  ws.onclose = () => {
+    setDot(serialNumber, '#666');
+    wsMap.delete(serialNumber);
+  };
+
+  ws.onerror = () => setDot(serialNumber, '#ff4757');
+
+  ws.onmessage = (ev) => {
+    try {
       const msg = JSON.parse(ev.data);
-      if(msg.type==='frame'){
 
-        // actualizar imagen
-        $('#img-'+msg.cam_id).src = 'data:image/jpeg;base64,'+msg.jpg_b64;
-        $('#prob-'+msg.cam_id).textContent = msg.p_vid.toFixed(3);
-        $('#ts-'+msg.cam_id).textContent = new Date(msg.ts*1000).toLocaleTimeString();
-        $('#meta-'+msg.cam_id).textContent = `p_win: ${msg.p_win.toFixed(3)} · p_vid: ${msg.p_vid.toFixed(3)}`;
-      
-        const st = $('#state-'+msg.cam_id);
-        if(msg.on){
-          st.textContent='ALERTA';
-          st.className='alert';
-      
-          enqueueCamera(msg.cam_id, msg.p_vid);
-          processQueue();
-        } 
-        else {
-            st.textContent='OK';
-            st.className='ok';
+      if (msg.type === 'frame') {
+        const msgSerial = msg.serial_number || msg.cam_id || serialNumber;
+        const key = toDomKey(msgSerial);
+
+        const img = document.getElementById(`img-${key}`);
+        const prob = document.getElementById(`prob-${key}`);
+        const ts = document.getElementById(`ts-${key}`);
+        const meta = document.getElementById(`meta-${key}`);
+        const st = document.getElementById(`state-${key}`);
+
+        if (img) img.src = 'data:image/jpeg;base64,' + msg.jpg_b64;
+        if (prob) prob.textContent = Number(msg.p_vid || 0).toFixed(3);
+        if (ts) ts.textContent = new Date(Number(msg.ts || 0) * 1000).toLocaleTimeString();
+        if (meta) {
+          meta.textContent = `p_win: ${Number(msg.p_win || 0).toFixed(3)} · p_vid: ${Number(msg.p_vid || 0).toFixed(3)}`;
         }
-      
-      
-      }      
-      else if(msg.type==='alert'){
+
+        if (st) {
+          if (msg.on) {
+            st.textContent = 'ALERTA';
+            st.className = 'alert';
+            enqueueCamera(msgSerial, Number(msg.p_vid || 0));
+            processQueue();
+          } else {
+            st.textContent = 'OK';
+            st.className = 'ok';
+          }
+        }
+      } else if (msg.type === 'alert') {
         addAlert(msg);
       }
-    }catch(e){ console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  wsMap.set(cam_id, ws);
+  wsMap.set(serialNumber, ws);
 }
 
-function closeWS(cam_id){
-  const ws = wsMap.get(cam_id);
-  if(ws){
+function closeWS(serialNumber) {
+  const ws = wsMap.get(serialNumber);
+  if (ws) {
     ws.close();
-    wsMap.delete(cam_id);
+    wsMap.delete(serialNumber);
   }
 
-  const card = document.getElementById(`card-${cam_id}`);
-  if(card){
-    card.remove();   // 👈 elimina la tarjeta del video
-  }
+  const card = document.getElementById(domId('card', serialNumber));
+  if (card) card.remove();
 }
 
-function setDot(cam_id, color){
-  const dot = $('#dot-'+cam_id); 
-  if(dot) dot.style.background=color;
+function setDot(serialNumber, color) {
+  const dot = document.getElementById(domId('dot', serialNumber));
+  if (dot) dot.style.background = color;
 }
-async function acceptAlert(ev){
-  const cam_id = ev.target.dataset.cam;
-  const prob = parseFloat(ev.target.dataset.prob);
-  const ts = parseFloat(ev.target.dataset.ts);
+
+async function persistPendingAlert(msg) {
+  const serial_number = msg.serial_number || msg.cam_id;
+  const prob = Number(msg.prob || 0);
+  const ts = Number(msg.ts || (Date.now() / 1000));
+
+  if (!serial_number) return;
 
   const payload = {
-    cam_id,
+    serial_number,
     prob,
     timestamp: ts,
-    accepted: true
+    status: 'pending'
   };
 
-  await fetch(apiUrl("/alerts/save"), {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
+  await fetch(apiUrl('/alerts/save'), {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+async function acceptAlert(ev) {
+  const btn = ev.currentTarget;
+  const serial_number = btn.dataset.serial;
+  const prob = parseFloat(btn.dataset.prob || '0');
+  const ts = parseFloat(btn.dataset.ts || '0');
+
+  const payload = {
+    serial_number,
+    prob,
+    timestamp: ts,
+    status: 'true_positive',
+    reviewer_email: localStorage.getItem(emailKey) || null
+  };
+
+  await fetch(apiUrl('/alerts/save'), {
+    method: 'POST',
+    headers: authHeaders(),
     body: JSON.stringify(payload)
   });
 
-  // quitar de lista
-  ev.target.parentElement.remove();
+  btn.closest('.alertrow')?.remove();
 }
 
-async function rejectAlert(ev){
-  const cam_id = ev.target.dataset.cam;
-  const prob = parseFloat(ev.target.dataset.prob);
-  const ts = parseFloat(ev.target.dataset.ts);
+async function rejectAlert(ev) {
+  const btn = ev.currentTarget;
+  const serial_number = btn.dataset.serial;
+  const prob = parseFloat(btn.dataset.prob || '0');
+  const ts = parseFloat(btn.dataset.ts || '0');
 
   const payload = {
-    cam_id,
+    serial_number,
     prob,
     timestamp: ts,
-    accepted: false
+    status: 'false_positive',
+    reviewer_email: localStorage.getItem(emailKey) || null
   };
 
-  await fetch(apiUrl("/alerts/save"), {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
+  await fetch(apiUrl('/alerts/save'), {
+    method: 'POST',
+    headers: authHeaders(),
     body: JSON.stringify(payload)
   });
 
-  // quitar de lista
-  ev.target.parentElement.remove();
+  btn.closest('.alertrow')?.remove();
 }
 
-function addAlert(msg){
+function addAlert(msg) {
+  const serial_number = msg.serial_number || msg.cam_id;
+  if (!serial_number) return;
+
+  const ts = Number(msg.ts || (Date.now() / 1000));
+  const prob = Number(msg.prob || 0);
+
+  persistPendingAlert({ serial_number, prob, ts }).catch(e => {
+    console.warn('No se pudo persistir alerta pendiente:', e);
+  });
+
   const row = document.createElement('div');
   row.className = 'alertrow';
 
-  const tsText = new Date(msg.ts * 1000).toLocaleString();
+  const tsText = new Date(ts * 1000).toLocaleString();
 
   row.innerHTML = `
-    <div style="flex:1">
-      🚨 <b>${msg.cam_id}</b>  
-      · prob=${msg.prob.toFixed(3)}  
-      · ${tsText}
+    <div style="flex:1;min-width:220px">
+      <b>${serial_number}</b>
+      <div class="muted">prob=${prob.toFixed(3)} · ${tsText}</div>
     </div>
-    <button class="sec btnOk" style="width:auto" data-cam="${msg.cam_id}" data-prob="${msg.prob}" data-ts="${msg.ts}">✔</button>
-    <button class="sec btnNo" style="width:auto" data-cam="${msg.cam_id}" data-prob="${msg.prob}" data-ts="${msg.ts}">✖</button>
+    <button class="sec action-btn btnOk" data-serial="${serial_number}" data-prob="${prob}" data-ts="${ts}">Aceptar</button>
+    <button class="sec action-btn btnNo" data-serial="${serial_number}" data-prob="${prob}" data-ts="${ts}">Rechazar</button>
   `;
 
   $('#alerts').prepend(row);
 
-  // Asignar eventos
   row.querySelector('.btnOk').onclick = acceptAlert;
   row.querySelector('.btnNo').onclick = rejectAlert;
 }
-
 
 /* ===========================
     INIT
@@ -578,11 +638,12 @@ function addAlert(msg){
 $('#btnLogout').onclick = logout;
 $('#btnAdd').onclick = addCamera;
 
-(async function init(){
-  if(!localStorage.getItem(tokenKey)){
-    window.location.href='/';
+(async function init() {
+  if (!localStorage.getItem(tokenKey)) {
+    window.location.href = '/';
     return;
   }
+
   setWho();
   await loadOverlay();
   await loadThreshold();

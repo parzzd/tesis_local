@@ -1,12 +1,12 @@
 # app/crud.py  –  Operaciones CRUD sobre la base de datos
 from sqlalchemy.orm import Session
-from app.models import User, AccessLog, CameraAction, AlertLog
+from app.models import User, AccessLog, CameraAction, AlertLog, Role
 from app.utils import make_salt, hash_password
 
 
 # ── Usuarios ──────────────────────────────────────────────
 def create_user(db: Session, nombre: str, apellido: str, email: str,
-                password: str, charge: str) -> User:
+                password: str, role_id: int) -> User:
     salt = make_salt()
     user = User(
         nombre=nombre,
@@ -14,7 +14,8 @@ def create_user(db: Session, nombre: str, apellido: str, email: str,
         username=email,
         password=hash_password(password, salt),
         salt=salt,
-        charge=charge,
+        role_id=role_id,
+        is_active=True,
     )
     db.add(user)
     db.commit()
@@ -26,17 +27,32 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(User.username == email).first()
 
 
+def get_role_by_name(db: Session, role_name: str) -> Role | None:
+    return db.query(Role).filter(Role.name == role_name).first()
+
+
+def ensure_roles(db: Session, role_names: list[str]):
+    current = {r.name for r in db.query(Role).all()}
+    changed = False
+    for role_name in role_names:
+        if role_name not in current:
+            db.add(Role(name=role_name))
+            changed = True
+    if changed:
+        db.commit()
+
+
 # ── Logs ──────────────────────────────────────────────────
 def add_access_log(db: Session, user_id: int):
     db.add(AccessLog(user_id=user_id))
     db.commit()
 
 
-def add_camera_action(db: Session, user_id: int, cam_id: str, action: str):
-    db.add(CameraAction(user_id=user_id, cam_id=cam_id, action=action))
+def add_camera_action(db: Session, user_id: int, camera_id: int, action: str):
+    db.add(CameraAction(user_id=user_id, camera_id=camera_id, action=action))
     db.commit()
 
 
-def add_alert_log(db: Session, cam_id: str, prob: float):
-    db.add(AlertLog(cam_id=cam_id, prob=prob))
+def add_alert_log(db: Session, camera_id: int, prob: float):
+    db.add(AlertLog(camera_id=camera_id, prob=prob))
     db.commit()

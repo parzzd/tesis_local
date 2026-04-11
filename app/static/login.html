@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Sistema de Detección</title>
+<title>Sistema de Deteccion</title>
 
 <style>
   :root{--bg:#0b0f17;--panel:#0f1522;--card:#0e1421;--mut:#9aa4b2;--txt:#e6edf3;--b:#1e2636;--btn:#335cce}
   *{box-sizing:border-box}
   body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}
-  .wrap{min-height:100vh;display:grid;place-items:center;background:radial-gradient(80% 60% at 50% 10%,#0f1729 0%,#0b0f17 60%)}
+  .wrap{min-height:100vh;display:grid;place-items:center;background:radial-gradient(80% 60% at 50% 10%,#0f1729 0%,#0b0f17 60%);padding:16px}
   .shell{width:min(92vw,520px);background:rgba(12,18,30,.8);border:1px solid #1a2234;border-radius:18px;
          box-shadow:0 10px 40px rgba(0,0,0,.35);padding:28px}
   .logo{display:flex;align-items:center;gap:10px;margin-bottom:16px}
@@ -17,10 +17,10 @@
   h1{font-size:28px;margin:0;font-weight:800;letter-spacing:.3px}
   h2{margin:12px 0 14px;font-size:18px;font-weight:700}
   label{display:block;margin:10px 0 6px;color:var(--mut);font-size:13px}
-  .in{width:100%;padding:12px 14px;border-radius:12px;background:var(--card);border:1px solid var(--b);color:var(--txt);outline:none}
-  .row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .in{width:100%;min-height:44px;padding:12px 14px;border-radius:12px;background:var(--card);border:1px solid var(--b);color:var(--txt);outline:none}
+  .row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;flex-wrap:wrap}
   .mut{color:var(--mut);font-size:13px}
-  .btn{width:100%;padding:12px 14px;border:none;border-radius:12px;background:var(--btn);color:#fff;
+  .btn{width:100%;min-height:44px;padding:12px 14px;border:none;border-radius:12px;background:var(--btn);color:#fff;
        cursor:pointer;font-weight:600}
   .btn:disabled{opacity:.6;cursor:not-allowed}
   .foot{text-align:right;margin-top:10px}
@@ -28,6 +28,13 @@
   .err{display:none;margin-bottom:10px;background:#3a1116;border:1px solid #6b1f28;color:#ffb4b8;
        padding:10px;border-radius:10px;font-size:13px}
   #regBox{display:none;margin-top:25px;padding-top:20px;border-top:1px solid #1a2234;}
+
+  @media (max-width: 768px) {
+    .shell{padding:20px}
+    h1{font-size:24px}
+    .row{align-items:flex-start}
+    .foot{text-align:left}
+  }
 </style>
 <script src="/config.js"></script>
 </head>
@@ -36,38 +43,36 @@
   <div class="shell">
     <div class="logo">
       <div class="badge">🛡️</div>
-      <h1>Tésis de Detección</h1>
+      <h1>Tesis de Deteccion</h1>
     </div>
 
-    <!-- LOGIN -->
-    <h2>Iniciar sesión</h2>
+    <h2>Iniciar sesion</h2>
     <div id="err" class="err"></div>
     <div id="tries" style="display:none;" class="mut"></div>
 
     <label>Correo</label>
     <input id="email" class="in" placeholder="usuario@vigilia.io" autocomplete="username"/>
 
-    <label>Contraseña</label>
-    <input id="password" type="password" class="in" placeholder="••••••••" autocomplete="current-password"/>
+    <label>Contrasena</label>
+    <input id="password" type="password" class="in" placeholder="********" autocomplete="current-password"/>
 
     <div class="row">
       <label class="mut" style="display:flex;align-items:center;gap:8px">
-        <input id="remember" type="checkbox" style="accent-color:#5f89ff"/> Recuérdame
+        <input id="remember" type="checkbox" style="accent-color:#5f89ff"/> Recuerdame
       </label>
       <div class="mut">
-        <a href="#" onclick="alert('Pide a un jefe restablecer tu clave.');return false;">¿Olvidó su contraseña?</a>
+        <a href="#" onclick="alert('Pide a un jefe restablecer tu clave.');return false;">¿Olvido su contrasena?</a>
       </div>
     </div>
 
     <div style="margin-top:14px">
-      <button id="btn" class="btn">Iniciar sesión</button>
+      <button id="btn" class="btn">Iniciar sesion</button>
     </div>
 
     <div class="foot">
       <a href="#" onclick="toggleRegistro();return false;">Crear cuenta</a>
     </div>
 
-    <!-- REGISTRO -->
     <div id="regBox">
       <h2>Crear cuenta</h2>
 
@@ -77,23 +82,23 @@
       <input id="reg_nombre" class="in" placeholder="Juan"/>
 
       <label>Apellido</label>
-      <input id="reg_apellido" class="in" placeholder="Pérez"/>
+      <input id="reg_apellido" class="in" placeholder="Perez"/>
 
       <label>Correo</label>
       <input id="reg_email" class="in" placeholder="correo@dominio.com"/>
 
-      <label>Contraseña</label>
-      <input id="reg_pass" type="password" class="in" placeholder="••••••••"/>
+      <label>Contrasena</label>
+      <input id="reg_pass" type="password" class="in" placeholder="********"/>
 
       <label>Cargo</label>
       <select id="reg_charge" class="in" onchange="showCodigo()">
-        <option value="">Seleccione cargo…</option>
+        <option value="">Seleccione cargo...</option>
         <option value="operador">Operador</option>
         <option value="jefe">Jefe</option>
       </select>
 
-      <label id="lbl_codigo" style="display:none;">Código de jefe</label>
-      <input id="reg_codigo" class="in" placeholder="código:20261 - para crear jefe" style="display:none;"/>
+      <label id="lbl_codigo" style="display:none;">Codigo de jefe</label>
+      <input id="reg_codigo" class="in" placeholder="codigo:20261 - para crear jefe" style="display:none;"/>
 
       <button class="btn" style="margin-top:12px" onclick="registerUser()">Registrarme</button>
     </div>
@@ -107,13 +112,12 @@ const tokenKey = 'sicher.token';
 const emailKey = 'sicher.email';
 const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
 
-// Recuperar email recordado
 const remembered = localStorage.getItem(emailKey);
-if (remembered) { $('#email').value = remembered; $('#remember').checked = true; }
+if (remembered) {
+  $('#email').value = remembered;
+  $('#remember').checked = true;
+}
 
-// =============================
-// Mostrar/ocultar formulario registro
-// =============================
 function toggleRegistro() {
   const box = $('#regBox');
   box.style.display = (box.style.display === 'block') ? 'none' : 'block';
@@ -122,20 +126,17 @@ function toggleRegistro() {
 function showCodigo() {
   const cargo = $('#reg_charge').value;
   $('#reg_codigo').style.display = cargo === 'jefe' ? 'block' : 'none';
-  $('#lbl_codigo').style.display  = cargo === 'jefe' ? 'block' : 'none';
+  $('#lbl_codigo').style.display = cargo === 'jefe' ? 'block' : 'none';
 }
 
-// =============================
-// Registro
-// =============================
 async function registerUser() {
   const payload = {
-    nombre:   $('#reg_nombre').value.trim(),
+    nombre: $('#reg_nombre').value.trim(),
     apellido: $('#reg_apellido').value.trim(),
-    email:    $('#reg_email').value.trim(),
+    email: $('#reg_email').value.trim(),
     password: $('#reg_pass').value.trim(),
-    charge:   $('#reg_charge').value,
-    codigo:   $('#reg_codigo').value.trim()
+    charge: $('#reg_charge').value,
+    codigo: $('#reg_codigo').value.trim()
   };
 
   const res = await fetch(apiUrl('/register'), {
@@ -154,24 +155,19 @@ async function registerUser() {
   }
 
   err.style.display = 'none';
-  alert("Registro exitoso. Ahora inicia sesión.");
+  alert('Registro exitoso. Ahora inicia sesion.');
   toggleRegistro();
 }
 
-// =============================
-// LOGIN
-// =============================
 async function doLogin() {
   const btn = $('#btn');
   const errBox = $('#err');
-  const triesBox = $('#tries');
 
   const email = $('#email').value.trim();
   const password = $('#password').value;
 
   btn.disabled = true;
   errBox.style.display = 'none';
-  triesBox.style.display = 'none';
 
   try {
     const res = await fetch(apiUrl('/login'), {
@@ -182,42 +178,43 @@ async function doLogin() {
 
     const data = await res.json();
 
-    // usuario bloqueado
     if (res.status === 403 && data.blocked) {
       errBox.textContent = data.error;
       errBox.style.display = 'block';
-      window.location.href = "/login_fail";
+      window.location.href = '/login_fail';
       return;
     }
 
-    // credenciales inválidas
     if (!res.ok) {
-      errBox.textContent = data.error || 'Credenciales inválidas.';
+      errBox.textContent = data.error || 'Credenciales invalidas.';
       errBox.style.display = 'block';
       btn.disabled = false;
       return;
     }
 
-    // Guardar datos en localStorage
-    if ($('#remember').checked)
+    if ($('#remember').checked) {
       localStorage.setItem(emailKey, email);
-    else
+    } else {
       localStorage.removeItem(emailKey);
+    }
+
+    const role = data.role || data.charge || 'operador';
 
     localStorage.setItem(tokenKey, data.access_token);
+    localStorage.setItem('sicher.user_id', String(data.user_id || ''));
     localStorage.setItem('sicher.email', data.email);
     localStorage.setItem('sicher.nombre', data.nombre);
     localStorage.setItem('sicher.apellido', data.apellido);
-    localStorage.setItem('sicher.charge', data.charge);
+    localStorage.setItem('sicher.role', role);
+    localStorage.setItem('sicher.charge', role);
 
-    // Redirección según cargo
-    if (data.charge === "jefe")
-      window.location.href = "/admin";
-    else
-      window.location.href = "/dashboard";
-
+    if (role === 'jefe') {
+      window.location.href = '/admin';
+    } else {
+      window.location.href = '/dashboard';
+    }
   } catch (e) {
-    errBox.textContent = 'Error de conexión.';
+    errBox.textContent = 'Error de conexion.';
     errBox.style.display = 'block';
   } finally {
     btn.disabled = false;

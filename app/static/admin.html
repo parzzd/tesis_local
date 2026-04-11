@@ -3,34 +3,55 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Panel de Jefe – Sicher</title>
+<title>Panel de Jefe - Sicher</title>
 
 <style>
-  :root{--bg:#0b0f17;--panel:#141b2c;--card:#0e1421;--mut:#9aa4b2;--txt:#e6edf3;--b:#1e2636;--btn:#335cce}
+  :root{--bg:#0b0f17;--panel:#141b2c;--card:#0e1421;--mut:#9aa4b2;--txt:#e6edf3;--b:#1e2636;--btn:#335cce;--danger:#8b1b1b}
   *{box-sizing:border-box}
   body{margin:0;font-family:Inter,system-ui,Roboto;background:var(--bg);color:var(--txt);display:flex;min-height:100vh}
 
-  aside{
-    width:260px;background:#111826;border-right:1px solid #1a2234;padding:20px;
+  aside{width:270px;background:#111826;border-right:1px solid #1a2234;padding:20px 14px;display:flex;flex-direction:column;gap:14px}
+  .brand h2{font-size:20px;margin:0 0 8px;font-weight:700}
+  #usuarioHeader{color:#8fb3ff;margin:0;font-size:15px}
+
+  .navItems{display:flex;flex-direction:column;gap:8px}
+  .item{
+    border:none;background:transparent;color:var(--mut);text-align:left;border-radius:10px;
+    padding:10px 12px;cursor:pointer;font-size:14px;min-height:44px
   }
-  aside h2{font-size:20px;margin:0 0 20px;font-weight:700}
-  aside .item{
-    padding:12px;margin-bottom:8px;border-radius:10px;cursor:pointer;color:var(--mut);
-  }
-  aside .item:hover{background:#1b2437}
-  aside .item.active{background:#23314e;color:#fff}
-  .sec{
-    margin-bottom:10px;padding:8px 14px;border-radius:8px;background:#8b1b1b;color:white;border:none;cursor:pointer;
-  }
-  main{flex:1;padding:24px}
+  .item:hover{background:#1b2437}
+  .item.active{background:#23314e;color:#fff}
+  .item.logout{color:#ffbdc2}
+
+  main{flex:1;padding:24px;min-width:0}
   h1{margin-top:0;font-size:26px;font-weight:800}
 
-  table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden;margin-top:12px}
-  th,td{padding:12px;border-bottom:1px solid #1e2636;font-size:14px}
+  .sec{
+    margin-bottom:10px;padding:10px 14px;border-radius:10px;background:var(--danger);
+    color:white;border:none;cursor:pointer;min-height:44px
+  }
+
+  .tableWrap{overflow-x:auto;border:1px solid #1e2636;border-radius:12px;background:var(--panel)}
+  table{width:100%;min-width:760px;border-collapse:collapse}
+  th,td{padding:12px;border-bottom:1px solid #1e2636;font-size:14px;vertical-align:top}
   th{background:#192236;text-align:left;color:#8fb3ff}
   tr:hover{background:#1a2335}
 
-  #usuarioHeader{color:#8fb3ff;margin-top:-12px;margin-bottom:20px;font-size:15px}
+  .status{padding:4px 8px;border-radius:999px;font-size:12px;display:inline-block}
+  .st-pending{background:#4a3f1d;color:#ffd986}
+  .st-true{background:#1d4a2d;color:#9ff0b4}
+  .st-false{background:#5b1f2c;color:#ffc1cb}
+
+  @media (max-width: 768px) {
+    body{flex-direction:column}
+    aside{width:100%;border-right:none;border-bottom:1px solid #1a2234;padding:12px}
+    .brand{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+    .navItems{flex-direction:row;overflow-x:auto;padding-bottom:2px}
+    .item{white-space:nowrap;flex:0 0 auto}
+    .item.logout{margin-left:auto}
+    main{padding:14px}
+    h1{font-size:22px}
+  }
 </style>
 <script src="/config.js"></script>
 </head>
@@ -38,86 +59,88 @@
 <body>
 
 <aside>
-  <h2>Panel de Jefe</h2>
-  <p id="usuarioHeader">—</p>
+  <div class="brand">
+    <h2>Panel de Jefe</h2>
+    <p id="usuarioHeader">-</p>
+  </div>
 
-  <div class="item active" onclick="showTab(event,'usuarios')">👤 Usuarios</div>
-  <div class="item" onclick="showTab(event,'camaras')">📷 Cámaras</div>
-  <div class="item" onclick="showTab(event,'alertas')">⚠ Alertas</div>
-  <div class="item" onclick="showTab(event,'accesos')">📅 Accesos</div>
-  <div class="item" onclick="showTab(event,'acciones')">🛠 Acciones</div>
-  <div class="item" onclick="logout()">🚪 Cerrar sesión</div>
+  <nav class="navItems">
+    <button class="item active" data-tab="usuarios" onclick="showTab(this,'usuarios')">Usuarios</button>
+    <button class="item" data-tab="camaras" onclick="showTab(this,'camaras')">Camaras</button>
+    <button class="item" data-tab="alertas" onclick="showTab(this,'alertas')">Alertas</button>
+    <button class="item" data-tab="accesos" onclick="showTab(this,'accesos')">Accesos</button>
+    <button class="item" data-tab="acciones" onclick="showTab(this,'acciones')">Acciones</button>
+    <button class="item logout" onclick="logout()">Cerrar sesion</button>
+  </nav>
 </aside>
 
 <main>
   <h1 id="titulo">Usuarios Registrados</h1>
 
-  <!-- Usuarios -->
   <section id="usuarios" class="tab">
-    <table>
-      <thead>
-        <tr>
-          <th>Nombre</th><th>Apellido</th><th>Email</th><th>Cargo</th>
-        </tr>
-      </thead>
-      <tbody id="tblUsuarios"></tbody>
-    </table>
-  </section>
-
-  <!-- Cámaras -->
-  <section id="camaras" class="tab" style="display:none;">
-    <table>
-      <thead>
-        <tr><th>ID de Cámara</th><th>Fuente</th></tr>
-      </thead>
-      <tbody id="tblCamaras"></tbody>
-    </table>
-  </section>
-<!-- Alertas -->
-<section id="alertas" class="tab" style="display:none;">
-  <button onclick="clearAlertas()" class="sec">
-    Borrar historial de alertas
-  </button>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Cámara</th><th>Probabilidad</th><th>Fecha / Hora</th>
-      </tr>
-    </thead>
-    <tbody id="tblAlertas"></tbody>
-  </table>
-</section>
-
-  <!-- Accesos -->
-  <section id="accesos" class="tab" style="display:none;">
-    <button onclick="clearAccesos()" class="sec" >
-        Borrar historial de accesos
-      </button>
-    <table>
+    <div class="tableWrap">
+      <table>
         <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Cargo</th>
-              <th>Fecha / Hora</th>
-            </tr>
-          </thead>
-          <tbody id="tblAccesos"></tbody>
-    </table>
+          <tr>
+            <th>Nombre</th><th>Apellido</th><th>Email</th><th>Rol</th><th>Activo</th>
+          </tr>
+        </thead>
+        <tbody id="tblUsuarios"></tbody>
+      </table>
+    </div>
   </section>
 
-  <!-- Acciones -->
+  <section id="camaras" class="tab" style="display:none;">
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Serial</th><th>Ubicacion</th><th>Fuente</th><th>Activa</th></tr>
+        </thead>
+        <tbody id="tblCamaras"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="alertas" class="tab" style="display:none;">
+    <button onclick="clearAlertas()" class="sec">Borrar historial de alertas</button>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Camara</th><th>Probabilidad</th><th>Estado de validacion</th><th>Revisado por</th><th>Fecha/Hora alerta</th><th>Fecha revision</th>
+          </tr>
+        </thead>
+        <tbody id="tblAlertas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="accesos" class="tab" style="display:none;">
+    <button onclick="clearAccesos()" class="sec">Borrar historial de accesos</button>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Fecha / Hora</th>
+          </tr>
+        </thead>
+        <tbody id="tblAccesos"></tbody>
+      </table>
+    </div>
+  </section>
+
   <section id="acciones" class="tab" style="display:none;">
-    <button onclick="clearAcciones()" class ="sec">
-        Borrar historial de acciones
-      </button>
-      
-    <table>
-      <thead>
-        <tr><th>Usuario</th><th>Cámara</th><th>Acción</th><th>Fecha / Hora</th></tr>
-      </thead>
-      <tbody id="tblAcciones"></tbody>
-    </table>
+    <button onclick="clearAcciones()" class="sec">Borrar historial de acciones</button>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr><th>Usuario</th><th>Camara</th><th>Accion</th><th>Fecha / Hora</th></tr>
+        </thead>
+        <tbody id="tblAcciones"></tbody>
+      </table>
+    </div>
   </section>
 
 </main>
@@ -127,38 +150,50 @@ const $ = s => document.querySelector(s);
 const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
 
 /* ============================================================
-   Seguridad: solo un JEFE puede ver esta página
+   Seguridad: solo un JEFE puede ver esta pagina
 ============================================================ */
 (function checkAuth(){
   const token = localStorage.getItem('sicher.token');
-  const cargo = localStorage.getItem('sicher.charge');
+  const role = localStorage.getItem('sicher.role') || localStorage.getItem('sicher.charge');
 
-  if (!token) return window.location.href = "/";
-  if (cargo !== "jefe") return window.location.href = "/dashboard";
+  if (!token) return window.location.href = '/';
+  if (role !== 'jefe') return window.location.href = '/dashboard';
 
-  const nombre = localStorage.getItem('sicher.nombre') || "";
-  const apellido = localStorage.getItem('sicher.apellido') || "";
-  $('#usuarioHeader').innerHTML = `👤 ${nombre} ${apellido}`;
+  const nombre = localStorage.getItem('sicher.nombre') || '';
+  const apellido = localStorage.getItem('sicher.apellido') || '';
+  $('#usuarioHeader').innerHTML = `${nombre} ${apellido}`.trim();
 })();
 
 /* ============================================================
-   Navegación entre pestañas
+   Navegacion entre pestañas
 ============================================================ */
-function showTab(ev, tab){
-  document.querySelectorAll(".tab").forEach(t=> t.style.display="none");
-  document.getElementById(tab).style.display="block";
+function showTab(btn, tab){
+  document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+  document.getElementById(tab).style.display = 'block';
 
-  document.querySelectorAll("aside .item").forEach(i=> i.classList.remove("active"));
-  ev.target.classList.add("active");
+  document.querySelectorAll('.item[data-tab]').forEach(i => i.classList.remove('active'));
+  btn.classList.add('active');
 
   const titles = {
-    usuarios: "Usuarios Registrados",
-    camaras: "Cámaras Registradas",
-    alertas:"Historial de Alertas",
-    accesos: "Historial de Accesos",
-    acciones: "Acciones Realizadas"
+    usuarios: 'Usuarios Registrados',
+    camaras: 'Camaras Registradas',
+    alertas: 'Historial de Alertas',
+    accesos: 'Historial de Accesos',
+    acciones: 'Acciones Realizadas'
   };
-  $('#titulo').innerText = titles[tab];
+  $('#titulo').innerText = titles[tab] || 'Panel';
+}
+
+function statusLabel(status){
+  if (status === 'true_positive') return 'Confirmado';
+  if (status === 'false_positive') return 'Falsa Alarma';
+  return 'Pendiente';
+}
+
+function statusClass(status){
+  if (status === 'true_positive') return 'status st-true';
+  if (status === 'false_positive') return 'status st-false';
+  return 'status st-pending';
 }
 
 /* ============================================================
@@ -167,67 +202,83 @@ function showTab(ev, tab){
 async function loadUsuarios(){
   const res = await fetch(apiUrl('/admin/users'));
   const data = await res.json();
-  $('#tblUsuarios').innerHTML = data.map(u=>`
+  $('#tblUsuarios').innerHTML = data.map(u => `
     <tr>
       <td>${u.nombre}</td>
       <td>${u.apellido}</td>
       <td>${u.email}</td>
-      <td>${u.charge}</td>
+      <td>${u.role || u.charge || '-'}</td>
+      <td>${u.is_active ? 'Si' : 'No'}</td>
     </tr>
   `).join('');
 }
+
 async function loadAlertas(){
   const res = await fetch(apiUrl('/admin/logs/alerts'));
   const data = await res.json();
-  $('#tblAlertas').innerHTML = data.map(a=>`
-    <tr>
-      <td>${a.cam_id}</td>
-      <td>${a.prob.toFixed(3)}</td>
-      <td>${new Date(a.timestamp*1000).toLocaleString()}</td>
-    </tr>
-  `).join('');
+  $('#tblAlertas').innerHTML = data.map(a => {
+    const cam = a.serial_number || `#${a.camera_id}`;
+    const reviewer = (a.reviewed_by_name && a.reviewed_by_name !== '-')
+      ? a.reviewed_by_name
+      : (a.reviewed_by_email || '-');
+
+    return `
+      <tr>
+        <td>${cam}</td>
+        <td>${Number(a.prob || 0).toFixed(3)}</td>
+        <td><span class="${statusClass(a.status)}">${statusLabel(a.status)}</span></td>
+        <td>${reviewer}</td>
+        <td>${new Date(a.timestamp * 1000).toLocaleString()}</td>
+        <td>${a.review_timestamp ? new Date(a.review_timestamp * 1000).toLocaleString() : '-'}</td>
+      </tr>
+    `;
+  }).join('');
 }
+
 async function clearAlertas(){
-  if(!confirm("¿Eliminar todas las alertas?")) return;
-  await fetch(apiUrl('/admin/logs/alerts/clear'), { method:"DELETE" });
+  if (!confirm('¿Eliminar todas las alertas?')) return;
+  await fetch(apiUrl('/admin/logs/alerts/clear'), { method: 'DELETE' });
   loadAlertas();
 }
 
 async function loadCamaras(){
-  const res = await fetch(apiUrl('/cameras'));
+  const res = await fetch(apiUrl('/cameras?include_inactive=true'));
   const data = await res.json();
-  $('#tblCamaras').innerHTML = data.map(c=>`
-    <tr><td>${c.cam_id}</td><td>${c.src}</td></tr>
+  $('#tblCamaras').innerHTML = data.map(c => `
+    <tr>
+      <td>${c.id}</td>
+      <td>${c.serial_number || c.cam_id}</td>
+      <td>${c.location_description || '-'}</td>
+      <td>${c.src}</td>
+      <td>${c.is_active ? 'Si' : 'No'}</td>
+    </tr>
   `).join('');
 }
 
 async function loadAccesos(){
-    const res = await fetch(apiUrl('/admin/logs/access'));
-    const data = await res.json();
-    $('#tblAccesos').innerHTML = data.map(a=>`
-      <tr>
-        <td>${a.usuario}</td>
-        <td>${a.cargo}</td>
-        <td>${new Date(a.timestamp*1000).toLocaleString()}</td>
-      </tr>
-    `).join('');
-  }
-  
-  
+  const res = await fetch(apiUrl('/admin/logs/access'));
+  const data = await res.json();
+  $('#tblAccesos').innerHTML = data.map(a => `
+    <tr>
+      <td>${a.usuario}</td>
+      <td>${a.cargo}</td>
+      <td>${new Date(a.timestamp * 1000).toLocaleString()}</td>
+    </tr>
+  `).join('');
+}
 
-  async function loadAcciones(){
-    const res = await fetch(apiUrl('/admin/logs/cameras'));
-    const data = await res.json();
-    $('#tblAcciones').innerHTML = data.map(a=>`
-      <tr>
-        <td>${a.usuario}</td>
-        <td>${a.cam_id}</td>
-        <td>${a.action}</td>
-        <td>${new Date(a.timestamp*1000).toLocaleString()}</td>
-      </tr>
-    `).join('');
-  }
-  
+async function loadAcciones(){
+  const res = await fetch(apiUrl('/admin/logs/cameras'));
+  const data = await res.json();
+  $('#tblAcciones').innerHTML = data.map(a => `
+    <tr>
+      <td>${a.usuario}</td>
+      <td>${a.serial_number || `#${a.camera_id}`}</td>
+      <td>${a.action}</td>
+      <td>${new Date(a.timestamp * 1000).toLocaleString()}</td>
+    </tr>
+  `).join('');
+}
 
 /* ============================================================
    Auto recarga (cada 5 s)
@@ -237,9 +288,8 @@ function autoRefresh(){
   loadCamaras();
   loadAccesos();
   loadAcciones();
-  loadAlertas(); 
+  loadAlertas();
 }
-
 
 autoRefresh();
 setInterval(autoRefresh, 5000);
@@ -249,20 +299,20 @@ setInterval(autoRefresh, 5000);
 ============================================================ */
 function logout(){
   localStorage.clear();
-  window.location.href='/';
+  window.location.href = '/';
 }
+
 async function clearAccesos(){
-    if(!confirm("¿Seguro que quieres borrar TODO el historial de accesos?")) return;
-    await fetch(apiUrl('/admin/logs/access/clear'), { method: 'DELETE' });
-    loadAccesos();
-  }
-  
-  async function clearAcciones(){
-    if(!confirm("¿Seguro que quieres borrar TODO el historial de acciones?")) return;
-    await fetch(apiUrl('/admin/logs/actions/clear'), { method: 'DELETE' });
-    loadAcciones();
-  }
-  
+  if (!confirm('¿Seguro que quieres borrar TODO el historial de accesos?')) return;
+  await fetch(apiUrl('/admin/logs/access/clear'), { method: 'DELETE' });
+  loadAccesos();
+}
+
+async function clearAcciones(){
+  if (!confirm('¿Seguro que quieres borrar TODO el historial de acciones?')) return;
+  await fetch(apiUrl('/admin/logs/actions/clear'), { method: 'DELETE' });
+  loadAcciones();
+}
 </script>
 </body>
 </html>
