@@ -14,6 +14,13 @@ LOG_FILE="/workspace/infer.log"
 PORT="${PORT:-8000}"
 SESSION="infer"
 
+# Umbrales de disparo de alerta (sobrescriben el threshold.json del modelo).
+# THR_ON  -> probabilidad minima del pooling para disparar alerta
+# THR_OFF -> probabilidad por debajo de la cual se resetea el estado
+# Subir estos valores = menos falsos positivos / alertas mas "duras".
+THR_ON="${THR_ON:-0.65}"
+THR_OFF="${THR_OFF:-0.50}"
+
 log() { echo "[runpod_start] $*"; }
 fail() { echo "[runpod_start][ERROR] $*" >&2; exit 1; }
 
@@ -65,7 +72,7 @@ tmux kill-session -t "$SESSION" 2>/dev/null || true
 log "lanzando uvicorn en tmux ($SESSION) puerto $PORT"
 : > "$LOG_FILE"
 tmux new -d -s "$SESSION" \
-  "cd $APP_DIR && MODELS_DIR=$MODELS_DIR POSE_WEIGHTS=$POSE_WEIGHTS uvicorn app.server_inference:app --host 0.0.0.0 --port $PORT 2>&1 | tee $LOG_FILE"
+  "cd $APP_DIR && MODELS_DIR=$MODELS_DIR POSE_WEIGHTS=$POSE_WEIGHTS THR_ON=$THR_ON THR_OFF=$THR_OFF uvicorn app.server_inference:app --host 0.0.0.0 --port $PORT 2>&1 | tee $LOG_FILE"
 
 # ── 6) Health check con reintentos ───────────────────────
 log "esperando a que /health responda (hasta 90s)"

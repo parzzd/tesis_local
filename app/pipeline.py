@@ -5,6 +5,7 @@
 #             y train_lgbm.py para evitar divergencias.
 
 import json
+import os
 from pathlib import Path
 from typing import List
 
@@ -249,7 +250,24 @@ def load_artifacts(models_dir: str | Path, pose_weights: str):
     thr_on = 0.5
     if thr_path.exists():
         thr_on = float(json.loads(thr_path.read_text(encoding="utf-8")).get("best_threshold", 0.5))
+
+    # Override opcional por env var (sin tocar el JSON del modelo).
+    env_thr_on = os.getenv("THR_ON")
+    if env_thr_on:
+        try:
+            thr_on = float(env_thr_on)
+            print(f"[BOOT] THR_ON sobreescrito por env var -> {thr_on:.2f}")
+        except ValueError:
+            print(f"[BOOT] THR_ON env var invalido: {env_thr_on!r}")
+
     thr_off = max(0.0, thr_on - HYST_GAP)
+    env_thr_off = os.getenv("THR_OFF")
+    if env_thr_off:
+        try:
+            thr_off = float(env_thr_off)
+            print(f"[BOOT] THR_OFF sobreescrito por env var -> {thr_off:.2f}")
+        except ValueError:
+            print(f"[BOOT] THR_OFF env var invalido: {env_thr_off!r}")
 
     lgbm = None
     if lgbm_path.exists():
