@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: tesis-videovigilancia-backend
+    env: python
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: MODELS_DIR
+        value: models_mix2
+      - key: POSE_WEIGHTS
+        value: yolo11s-pose.pt
+      - key: FUSION_W
+        value: "0.50"
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: BOSS_CODE
+        sync: false
