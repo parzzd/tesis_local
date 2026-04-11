@@ -162,7 +162,18 @@
     <span class="switch"></span>
     <span class="switchText">Mostrar esqueleto</span>
   </label>
-  
+
+  <div style="margin-top:14px;">
+    <label style="display:flex;align-items:center;gap:10px;font-size:13px;">
+      <span style="min-width:110px;">Sensibilidad alerta</span>
+      <input type="range" id="rngThrOn" min="0.10" max="0.95" step="0.01" value="0.65" style="flex:1;">
+      <span id="lblThrOn" style="min-width:42px;text-align:right;font-variant-numeric:tabular-nums;">0.65</span>
+    </label>
+    <div style="font-size:11px;color:#7a8599;margin-top:4px;">
+      Mayor valor = menos falsos positivos. THR_OFF = THR_ON − 0.15.
+    </div>
+  </div>
+
 </div>
 
 <h2>Alertas</h2>
@@ -296,6 +307,44 @@ async function setOverlay(){
 }
 
 $('#chkOverlay').addEventListener('change', setOverlay);
+
+/* ===========================
+   THRESHOLD: CARGAR Y GUARDAR
+=========================== */
+const THR_HYST_GAP = 0.15;
+
+async function loadThreshold(){
+  try {
+    const res = await fetch(inferenceUrl('/threshold/get'));
+    const data = await res.json();
+    const thrOn = (data.thr_on_override ?? data.thr_on_model ?? 0.65);
+    $('#rngThrOn').value = thrOn;
+    $('#lblThrOn').textContent = Number(thrOn).toFixed(2);
+  } catch(e){
+    console.warn("No se pudo cargar threshold:", e);
+  }
+}
+
+let thrSaveTimer = null;
+async function setThreshold(){
+  const thrOn  = parseFloat($('#rngThrOn').value);
+  const thrOff = Math.max(0, thrOn - THR_HYST_GAP);
+  $('#lblThrOn').textContent = thrOn.toFixed(2);
+  clearTimeout(thrSaveTimer);
+  thrSaveTimer = setTimeout(async () => {
+    try {
+      await fetch(inferenceUrl('/threshold/set'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ thr_on: thrOn, thr_off: thrOff })
+      });
+    } catch(e){
+      console.warn("No se pudo guardar threshold:", e);
+    }
+  }, 200);
+}
+
+$('#rngThrOn').addEventListener('input', setThreshold);
 
 /* ===========================
     SESIÓN
@@ -536,6 +585,7 @@ $('#btnAdd').onclick = addCamera;
   }
   setWho();
   await loadOverlay();
+  await loadThreshold();
   await loadCameras();
 })();
 </script>

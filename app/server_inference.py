@@ -68,6 +68,12 @@ FUSION_W     = float(os.getenv("FUSION_W", "0.50"))
 VIDEO_MAX_SCORES = 900
 DRAW_OVERLAY     = True
 
+# Override en runtime de los umbrales del modelo. None => usar el valor
+# cargado desde el JSON del modelo (o THR_ON/THR_OFF env var). Se puede
+# modificar en caliente con POST /threshold/set.
+THR_ON_RUNTIME: float | None = None
+THR_OFF_RUNTIME: float | None = None
+
 # Predicciones de warmup tras llenar la ventana inicial: se descartan del
 # pooling y no pueden disparar alertas (evita "spike" inicial del LSTM).
 WARMUP_PREDS = int(os.getenv("WARMUP_PREDS", "32"))
@@ -130,6 +136,42 @@ def overlay_set(payload: dict = Body(...)):
     return {"ok": True, "overlay": DRAW_OVERLAY}
 
 
+# ── Thresholds (runtime override) ─────────────────────────
+@app.get("/threshold/get")
+def threshold_get():
+    """
+    Devuelve umbrales efectivos (override si existe, sino los del modelo).
+    """
+    thr_on_model = None
+    thr_off_model = None
+    if ARTIFACTS is not None:
+        _, _, _, thr_on_model, thr_off_model, *_ = ARTIFACTS
+    return {
+        "thr_on": THR_ON_RUNTIME if THR_ON_RUNTIME is not None else thr_on_model,
+        "thr_off": THR_OFF_RUNTIME if THR_OFF_RUNTIME is not None else thr_off_model,
+        "thr_on_override": THR_ON_RUNTIME,
+        "thr_off_override": THR_OFF_RUNTIME,
+        "thr_on_model": thr_on_model,
+        "thr_off_model": thr_off_model,
+    }
+
+
+@app.post("/threshold/set")
+def threshold_set(payload: dict = Body(...)):
+    """
+    Setea override de THR_ON / THR_OFF. Manda null para limpiar override.
+    Body: { "thr_on": 0.70, "thr_off": 0.55 }
+    """
+    global THR_ON_RUNTIME, THR_OFF_RUNTIME
+    if "thr_on" in payload:
+        v = payload["thr_on"]
+        THR_ON_RUNTIME = float(v) if v is not None else None
+    if "thr_off" in payload:
+        v = payload["thr_off"]
+        THR_OFF_RUNTIME = float(v) if v is not None else None
+    return {"ok": True, "thr_on": THR_ON_RUNTIME, "thr_off": THR_OFF_RUNTIME}
+
+
 # ==========================================================
 # CAMERA WORKER
 # ==========================================================
@@ -168,6 +210,12 @@ class CameraWorker:
             return None
 
         keras_model, mu, sd, thr_on, thr_off, lgbm, pose, stacker = get_artifacts()
+
+        # Override en caliente desde /threshold/set (si esta seteado).
+        if THR_ON_RUNTIME is not None:
+            thr_on = THR_ON_RUNTIME
+        if THR_OFF_RUNTIME is not None:
+            thr_off = THR_OFF_RUNTIME
 
         res = pose.predict(frame, imgsz=IMGSZ, conf=CONF_POSE, iou=IOU_POSE, verbose=False)[0]
 
