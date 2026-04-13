@@ -29,6 +29,7 @@ from app.crud import (
     create_company,
     create_user,
     ensure_roles,
+    get_company_by_codigo,
     get_company_by_id,
     get_role_by_name,
     get_user_by_email,
@@ -298,7 +299,27 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if role is None:
         return JSONResponse({"error": "No se pudo resolver el rol"}, status_code=500)
 
-    create_user(db, req.nombre, req.apellido, email, req.password, role.id, req.company_id)
+    company_id = req.company_id
+
+    # Jefe: create company from empresa_nombre
+    if role_name == ROLE_BOSS:
+        empresa_nombre = (req.empresa_nombre or "").strip()
+        if not empresa_nombre:
+            return JSONResponse({"error": "Nombre de empresa obligatorio para jefe"}, status_code=400)
+        company = create_company(db, empresa_nombre)
+        company_id = company.id
+
+    # Operador: find company by codigo
+    if role_name == ROLE_OPERATOR:
+        codigo = (req.codigo or "").strip()
+        if not codigo:
+            return JSONResponse({"error": "Codigo de empresa obligatorio"}, status_code=400)
+        company = get_company_by_codigo(db, codigo)
+        if not company:
+            return JSONResponse({"error": "Codigo de empresa invalido"}, status_code=404)
+        company_id = company.id
+
+    create_user(db, req.nombre, req.apellido, email, req.password, role.id, company_id)
     return {"ok": True}
 
 
@@ -405,6 +426,7 @@ def list_companies(db: Session = Depends(get_db)):
             "id": c.id,
             "name": c.name,
             "rut": c.rut,
+            "codigo": c.codigo,
             "is_active": c.is_active,
             "user_count": len(c.users),
             "camera_count": len(c.cameras),
@@ -426,7 +448,7 @@ def add_company(payload: CompanyCreate, db: Session = Depends(get_db)):
             return JSONResponse({"error": "RUT ya registrado"}, status_code=409)
 
     company = create_company(db, name, rut)
-    return {"ok": True, "company": {"id": company.id, "name": company.name, "rut": company.rut}}
+    return {"ok": True, "company": {"id": company.id, "name": company.name, "rut": company.rut, "codigo": company.codigo}}
 
 
 @app.patch("/companies/{company_id}")
@@ -447,7 +469,7 @@ def update_company(company_id: int, payload: CompanyCreate, db: Session = Depend
 
     db.commit()
     db.refresh(company)
-    return {"ok": True, "company": {"id": company.id, "name": company.name, "rut": company.rut}}
+    return {"ok": True, "company": {"id": company.id, "name": company.name, "rut": company.rut, "codigo": company.codigo}}
 
 
 @app.delete("/companies/{company_id}")

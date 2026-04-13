@@ -17,6 +17,7 @@ class RegisterRequest(BaseModel):
     charge: str
     codigo: Optional[str] = None
     company_id: Optional[int] = None
+    empresa_nombre: Optional[str] = None
 
 
 class CameraConfig(BaseModel):

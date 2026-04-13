@@ -91,14 +91,23 @@
       <input id="reg_pass" type="password" class="in" placeholder="********"/>
 
       <label>Cargo</label>
-      <select id="reg_charge" class="in" onchange="showCodigo()">
+      <select id="reg_charge" class="in" onchange="showCamposRol()">
         <option value="">Seleccione cargo...</option>
         <option value="operador">Operador</option>
         <option value="jefe">Jefe</option>
       </select>
 
-      <label id="lbl_codigo" style="display:none;">Codigo de jefe</label>
-      <input id="reg_codigo" class="in" placeholder="codigo:20261 - para crear jefe" style="display:none;"/>
+      <div id="campos_jefe" style="display:none;">
+        <label>Codigo de jefe</label>
+        <input id="reg_codigo" class="in" placeholder="Codigo de autorizacion"/>
+        <label>Nombre de empresa</label>
+        <input id="reg_empresa" class="in" placeholder="Nombre de su empresa"/>
+      </div>
+
+      <div id="campos_operador" style="display:none;">
+        <label>Codigo de empresa</label>
+        <input id="reg_codigo_empresa" class="in" placeholder="Codigo proporcionado por su jefe"/>
+      </div>
 
       <button class="btn" style="margin-top:12px" onclick="registerUser()">Registrarme</button>
     </div>
@@ -123,20 +132,22 @@ function toggleRegistro() {
   box.style.display = (box.style.display === 'block') ? 'none' : 'block';
 }
 
-function showCodigo() {
+function showCamposRol() {
   const cargo = $('#reg_charge').value;
-  $('#reg_codigo').style.display = cargo === 'jefe' ? 'block' : 'none';
-  $('#lbl_codigo').style.display = cargo === 'jefe' ? 'block' : 'none';
+  $('#campos_jefe').style.display = cargo === 'jefe' ? 'block' : 'none';
+  $('#campos_operador').style.display = cargo === 'operador' ? 'block' : 'none';
 }
 
 async function registerUser() {
+  const cargo = $('#reg_charge').value;
   const payload = {
     nombre: $('#reg_nombre').value.trim(),
     apellido: $('#reg_apellido').value.trim(),
     email: $('#reg_email').value.trim(),
     password: $('#reg_pass').value.trim(),
-    charge: $('#reg_charge').value,
-    codigo: $('#reg_codigo').value.trim()
+    charge: cargo,
+    codigo: cargo === 'jefe' ? $('#reg_codigo').value.trim() : $('#reg_codigo_empresa').value.trim(),
+    empresa_nombre: cargo === 'jefe' ? $('#reg_empresa').value.trim() : undefined
   };
 
   const res = await fetch(apiUrl('/register'), {

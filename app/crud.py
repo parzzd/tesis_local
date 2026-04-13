@@ -5,8 +5,20 @@ from app.utils import make_salt, hash_password
 
 
 # ── Empresas ──────────────────────────────────────────────
-def create_company(db: Session, name: str, rut: str | None = None) -> Company:
-    company = Company(name=name, rut=rut or None, is_active=True)
+def _generate_company_code(db: Session) -> str:
+    """Generate unique 6-digit company code."""
+    import random
+    import string
+    while True:
+        code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        if not db.query(Company).filter(Company.codigo == code).first():
+            return code
+
+
+def create_company(db: Session, name: str, rut: str | None = None, codigo: str | None = None) -> Company:
+    if not codigo:
+        codigo = _generate_company_code(db)
+    company = Company(name=name, rut=rut or None, codigo=codigo, is_active=True)
     db.add(company)
     db.commit()
     db.refresh(company)
@@ -15,6 +27,10 @@ def create_company(db: Session, name: str, rut: str | None = None) -> Company:
 
 def get_company_by_id(db: Session, company_id: int) -> Company | None:
     return db.query(Company).filter(Company.id == company_id).first()
+
+
+def get_company_by_codigo(db: Session, codigo: str) -> Company | None:
+    return db.query(Company).filter(Company.codigo == codigo, Company.is_active.is_(True)).first()
 
 
 # ── Usuarios ──────────────────────────────────────────────

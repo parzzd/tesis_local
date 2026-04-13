@@ -113,7 +113,7 @@
     <div class="tableWrap">
       <table>
         <thead>
-          <tr><th>ID</th><th>Nombre</th><th>RUT</th><th>Usuarios</th><th>Camaras</th><th>Activa</th></tr>
+          <tr><th>ID</th><th>Nombre</th><th>RUT</th><th>Codigo</th><th>Usuarios</th><th>Camaras</th><th>Activa</th></tr>
         </thead>
         <tbody id="tblEmpresas"></tbody>
       </table>
@@ -310,6 +310,7 @@ async function loadEmpresas(){
       <td>${e.id}</td>
       <td>${e.name}</td>
       <td>${e.rut || '-'}</td>
+      <td>${e.codigo || '-'}</td>
       <td>${e.user_count}</td>
       <td>${e.camera_count}</td>
       <td>${e.is_active ? 'Si' : 'No'}</td>
