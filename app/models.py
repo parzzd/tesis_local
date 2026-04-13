@@ -20,6 +20,19 @@ def _utcnow():
     return datetime.now(timezone.utc)
 
 
+# ── Empresas ──────────────────────────────────────────────
+class Company(Base):
+    __tablename__ = "companies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    rut = Column(String, nullable=True, unique=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    users = relationship("User", back_populates="company")
+    cameras = relationship("Camera", back_populates="company")
+
+
 # ── Catálogo de roles ─────────────────────────────────────
 class Role(Base):
     __tablename__ = "roles"
@@ -41,9 +54,11 @@ class User(Base):
     password = Column(String, nullable=False)  # hash
     salt = Column(String, nullable=False, default="")  # salt para PBKDF2
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True, index=True)
     is_active = Column(Boolean, nullable=False, default=True)
 
     role = relationship("Role", back_populates="users")
+    company = relationship("Company", back_populates="users")
     access_logs = relationship("AccessLog", back_populates="user", cascade="all, delete-orphan")
     camera_actions = relationship("CameraAction", back_populates="user", cascade="all, delete-orphan")
     reviewed_alerts = relationship("AlertLog", back_populates="reviewer")
@@ -58,7 +73,9 @@ class Camera(Base):
     src = Column(String, nullable=False)
     location_description = Column(String, nullable=False, default="")
     is_active = Column(Boolean, nullable=False, default=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True, index=True)
 
+    company = relationship("Company", back_populates="cameras")
     alert_logs = relationship("AlertLog", back_populates="camera")
     camera_actions = relationship("CameraAction", back_populates="camera")
 

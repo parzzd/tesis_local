@@ -16,6 +16,7 @@ class RegisterRequest(BaseModel):
     password: str
     charge: str
     codigo: Optional[str] = None
+    company_id: Optional[int] = None
 
 
 class CameraConfig(BaseModel):
@@ -23,6 +24,12 @@ class CameraConfig(BaseModel):
     src: str
     location_description: Optional[str] = ""
     is_active: Optional[bool] = True
+    company_id: Optional[int] = None
+
+
+class CompanyCreate(BaseModel):
+    name: str
+    rut: Optional[str] = None
 
 
 class AlertDecision(BaseModel):

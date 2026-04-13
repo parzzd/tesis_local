@@ -1,12 +1,25 @@
 # app/crud.py  –  Operaciones CRUD sobre la base de datos
 from sqlalchemy.orm import Session
-from app.models import User, AccessLog, CameraAction, AlertLog, Role
+from app.models import User, AccessLog, CameraAction, AlertLog, Role, Company
 from app.utils import make_salt, hash_password
+
+
+# ── Empresas ──────────────────────────────────────────────
+def create_company(db: Session, name: str, rut: str | None = None) -> Company:
+    company = Company(name=name, rut=rut or None, is_active=True)
+    db.add(company)
+    db.commit()
+    db.refresh(company)
+    return company
+
+
+def get_company_by_id(db: Session, company_id: int) -> Company | None:
+    return db.query(Company).filter(Company.id == company_id).first()
 
 
 # ── Usuarios ──────────────────────────────────────────────
 def create_user(db: Session, nombre: str, apellido: str, email: str,
-                password: str, role_id: int) -> User:
+                password: str, role_id: int, company_id: int | None = None) -> User:
     salt = make_salt()
     user = User(
         nombre=nombre,
@@ -15,6 +28,7 @@ def create_user(db: Session, nombre: str, apellido: str, email: str,
         password=hash_password(password, salt),
         salt=salt,
         role_id=role_id,
+        company_id=company_id,
         is_active=True,
     )
     db.add(user)

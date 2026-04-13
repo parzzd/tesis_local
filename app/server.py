@@ -26,14 +26,16 @@ from sqlalchemy.orm import Session
 from app.crud import (
     add_access_log,
     add_camera_action,
+    create_company,
     create_user,
     ensure_roles,
+    get_company_by_id,
     get_role_by_name,
     get_user_by_email,
 )
 from app.database import Base, SessionLocal, engine
-from app.models import AccessLog, AlertLog, Camera, CameraAction, User
-from app.schemas import AlertDecision, CameraConfig, LoginRequest, RegisterRequest
+from app.models import AccessLog, AlertLog, Camera, CameraAction, Company, User
+from app.schemas import AlertDecision, CameraConfig, CompanyCreate, LoginRequest, RegisterRequest
 from app.utils import verify_password
 
 load_dotenv()
@@ -296,7 +298,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if role is None:
         return JSONResponse({"error": "No se pudo resolver el rol"}, status_code=500)
 
-    create_user(db, req.nombre, req.apellido, email, req.password, role.id)
+    create_user(db, req.nombre, req.apellido, email, req.password, role.id, req.company_id)
     return {"ok": True}
 
 
@@ -313,6 +315,8 @@ def admin_users(db: Session = Depends(get_db)):
             "role": _role_name(u),
             "charge": _role_name(u),
             "is_active": u.is_active,
+            "company_id": u.company_id,
+            "company_name": u.company.name if u.company else None,
         }
         for u in users
     ]
@@ -391,6 +395,73 @@ def clear_alert_logs(db: Session = Depends(get_db)):
 
 
 # ==========================================================
+# EMPRESAS
+# ==========================================================
+@app.get("/companies")
+def list_companies(db: Session = Depends(get_db)):
+    rows = db.query(Company).order_by(Company.id.asc()).all()
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "rut": c.rut,
+            "is_active": c.is_active,
+            "user_count": len(c.users),
+            "camera_count": len(c.cameras),
+        }
+        for c in rows
+    ]
+
+
+@app.post("/companies")
+def add_company(payload: CompanyCreate, db: Session = Depends(get_db)):
+    name = payload.name.strip()
+    if not name:
+        return JSONResponse({"error": "Nombre obligatorio"}, status_code=400)
+
+    rut = (payload.rut or "").strip() or None
+    if rut:
+        existing = db.query(Company).filter(Company.rut == rut).first()
+        if existing:
+            return JSONResponse({"error": "RUT ya registrado"}, status_code=409)
+
+    company = create_company(db, name, rut)
+    return {"ok": True, "company": {"id": company.id, "name": company.name, "rut": company.rut}}
+
+
+@app.patch("/companies/{company_id}")
+def update_company(company_id: int, payload: CompanyCreate, db: Session = Depends(get_db)):
+    company = get_company_by_id(db, company_id)
+    if not company:
+        return JSONResponse({"error": "Empresa no encontrada"}, status_code=404)
+
+    name = payload.name.strip()
+    if name:
+        company.name = name
+    rut = (payload.rut or "").strip() or None
+    if rut and rut != company.rut:
+        existing = db.query(Company).filter(Company.rut == rut, Company.id != company_id).first()
+        if existing:
+            return JSONResponse({"error": "RUT ya registrado"}, status_code=409)
+        company.rut = rut
+
+    db.commit()
+    db.refresh(company)
+    return {"ok": True, "company": {"id": company.id, "name": company.name, "rut": company.rut}}
+
+
+@app.delete("/companies/{company_id}")
+def delete_company(company_id: int, db: Session = Depends(get_db)):
+    company = get_company_by_id(db, company_id)
+    if not company:
+        return JSONResponse({"error": "Empresa no encontrada"}, status_code=404)
+
+    company.is_active = False
+    db.commit()
+    return {"ok": True}
+
+
+# ==========================================================
 # CAMARAS  -  persistidas en DB (Supabase)
 # ==========================================================
 @app.get("/cameras")
@@ -408,6 +479,8 @@ def list_cameras(include_inactive: bool = False, db: Session = Depends(get_db)):
             "src": r.src,
             "location_description": r.location_description,
             "is_active": r.is_active,
+            "company_id": r.company_id,
+            "company_name": r.company.name if r.company else None,
         }
         for r in rows
     ]
@@ -432,12 +505,15 @@ def add_camera(cfg: CameraConfig, request: Request, db: Session = Depends(get_db
         camera.src = src
         camera.location_description = location_description
         camera.is_active = desired_active
+        if cfg.company_id is not None:
+            camera.company_id = cfg.company_id
     else:
         camera = Camera(
             serial_number=serial_number,
             src=src,
             location_description=location_description,
             is_active=desired_active,
+            company_id=cfg.company_id,
         )
         db.add(camera)
 
