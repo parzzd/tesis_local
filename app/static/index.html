@@ -42,8 +42,16 @@
     .alertrow{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #1e2636}
     .statusdot{width:8px;height:8px;border-radius:50%}
 
+    .cam-row{padding:10px;border-bottom:1px solid #1e2636}
     .cam-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
     .cam-actions button{width:auto;min-width:88px}
+    .cam-btn{font-weight:600;border:none;border-radius:8px;padding:8px 14px;min-height:36px;font-size:13px}
+    .cam-btn-open{background:#1b6b3a;color:#e6edf3}
+    .cam-btn-open:hover{background:#22854a}
+    .cam-btn-close{background:#b08a00;color:#1a1a1a}
+    .cam-btn-close:hover{background:#cca000}
+    .cam-btn-del{background:#8b2035;color:#e6edf3}
+    .cam-btn-del:hover{background:#a82845}
 
     .switchWrap{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
     .switchWrap input{display:none}
@@ -373,18 +381,19 @@ function rowCam(cfg) {
   const serial = cfg.serial_number || cfg.cam_id;
   const location = cfg.location_description || 'Sin ubicacion';
   const div = document.createElement('div');
-  div.className = 'alertrow';
+  div.className = 'cam-row';
   div.innerHTML = `
-    <div class="statusdot" id="${domId('dot', serial)}" style="background:#666"></div>
-    <div style="flex:1;min-width:180px">
-      <b>${serial}</b>
-      <div class="muted">${location}</div>
-      <div class="muted">${cfg.src}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div class="statusdot" id="${domId('dot', serial)}" style="background:#666"></div>
+      <div style="flex:1">
+        <b>${serial}</b>
+        <div class="muted">${location}</div>
+      </div>
     </div>
     <div class="cam-actions">
-      <button data-serial="${serial}" data-src="${encodeURIComponent(cfg.src)}" data-loc="${encodeURIComponent(location)}" class="sec btnOpen">Abrir</button>
-      <button data-serial="${serial}" class="sec btnClose">Cerrar</button>
-      <button data-serial="${serial}" class="sec btnDel">Eliminar</button>
+      <button data-serial="${serial}" data-src="${encodeURIComponent(cfg.src)}" data-loc="${encodeURIComponent(location)}" class="btnOpen cam-btn cam-btn-open">Abrir</button>
+      <button data-serial="${serial}" class="btnClose cam-btn cam-btn-close">Cerrar</button>
+      <button data-serial="${serial}" class="btnDel cam-btn cam-btn-del">Eliminar</button>
     </div>
   `;
   return div;
@@ -426,6 +435,8 @@ async function loadCameras() {
 =========================== */
 function camCard(serialNumber, locationDescription = '') {
   const key = toDomKey(serialNumber);
+  const meta = cameraMeta.get(serialNumber);
+  const src = meta ? meta.src : '';
   const card = document.createElement('div');
   card.className = 'camcard';
   card.id = `card-${key}`;
@@ -444,6 +455,7 @@ function camCard(serialNumber, locationDescription = '') {
       <div>Estado: <b id="state-${key}" class="ok">OK</b></div>
       <div>Prob: <b id="prob-${key}" class="muted">0.000</b></div>
     </div>
+    <div style="padding:4px 12px 8px;font-size:11px;color:#7a8599;word-break:break-all">${src}</div>
   `;
   return card;
 }
