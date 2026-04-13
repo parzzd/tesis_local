@@ -285,9 +285,6 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if role_name not in DEFAULT_ROLES:
         return JSONResponse({"error": "Cargo invalido"}, status_code=400)
 
-    if role_name == ROLE_BOSS and req.codigo != BOSS_CODE:
-        return JSONResponse({"error": "Codigo incorrecto"}, status_code=403)
-
     if get_user_by_email(db, email):
         return JSONResponse({"error": "Usuario existente"}, status_code=409)
 
@@ -301,12 +298,17 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
     company_id = req.company_id
 
-    # Jefe: create company from empresa_nombre
+    # Jefe: create company with code chosen by jefe
     if role_name == ROLE_BOSS:
         empresa_nombre = (req.empresa_nombre or "").strip()
+        codigo = (req.codigo or "").strip()
         if not empresa_nombre:
-            return JSONResponse({"error": "Nombre de empresa obligatorio para jefe"}, status_code=400)
-        company = create_company(db, empresa_nombre)
+            return JSONResponse({"error": "Nombre de empresa obligatorio"}, status_code=400)
+        if not codigo:
+            return JSONResponse({"error": "Debe crear un codigo para su empresa"}, status_code=400)
+        if get_company_by_codigo(db, codigo):
+            return JSONResponse({"error": "Ese codigo ya esta en uso, elija otro"}, status_code=409)
+        company = create_company(db, empresa_nombre, codigo=codigo)
         company_id = company.id
 
     # Operador: find company by codigo
