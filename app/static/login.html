@@ -181,6 +181,9 @@ async function doLogin() {
     if (res.status === 403 && data.blocked) {
       errBox.textContent = data.error;
       errBox.style.display = 'block';
+      if (data.blocked_until) {
+        localStorage.setItem('blocked_until', data.blocked_until);
+      }
       window.location.href = '/login_fail';
       return;
     }

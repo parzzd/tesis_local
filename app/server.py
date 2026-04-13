@@ -244,7 +244,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
     info = FAILED_ATTEMPTS.get(email, {"count": 0, "blocked_until": None})
     if info["blocked_until"] and now < info["blocked_until"]:
-        return JSONResponse({"error": "Bloqueado", "blocked": True}, status_code=403)
+        return JSONResponse({"error": "Bloqueado", "blocked": True, "blocked_until": info["blocked_until"].isoformat()}, status_code=403)
 
     user = get_user_by_email(db, email)
     if not user or not verify_password(req.password, user.salt, user.password):
