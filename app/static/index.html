@@ -4,100 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sicher - Monitoreo AI</title>
-  <style>
-    :root{--bg:#0b0f17;--panel:#121826;--muted:#a9b1bd;--txt:#e6edf3;--ok:#18a558;--warn:#f2a900;--alert:#ff4757;--card:#0f1522}
-    *{box-sizing:border-box}
-    html, body{height:100%;margin:0}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Helvetica,Arial;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;min-height:100vh}
-    header{padding:16px 20px;border-bottom:1px solid #1e2636;display:flex;align-items:center;gap:12px}
-    header h1{font-size:18px;margin:0}
-    header .sp{flex:1}
-
-    main{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px;flex:1}
-    .panel{background:var(--panel);border:1px solid #1f293b;border-radius:14px;padding:16px}
-
-    label{display:block;margin:8px 0 6px;color:var(--muted);font-size:13px}
-    input,button,select{width:100%;min-height:44px;padding:11px 12px;border-radius:10px;border:1px solid #263248;background:#0e1421;color:var(--txt)}
-    button{cursor:pointer;background:#1b3ea6;border-color:#1b3ea6}
-    button:hover{filter:brightness(1.06)}
-    button.sec{background:#24314a;border-color:#2c3d59}
-
-    .row{display:flex;gap:8px}
-    .row>*{flex:1}
-
-    .muted{color:var(--muted)}
-    .ok{color:var(--ok)}
-    .alert{color:var(--alert)}
-    .warn{color:var(--warn)}
-
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
-    .camcard{background:var(--card);border:1px solid #1c2436;border-radius:14px;overflow:hidden}
-    .camhead{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #1e2636}
-    .camhead h3{margin:0;font-size:14px}
-    .cammeta{font-size:12px;color:var(--muted)}
-    .frame{aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center}
-    .stats{display:flex;gap:12px;padding:8px 12px;font-size:13px;border-top:1px solid #1e2636;flex-wrap:wrap}
-
-    .alerts{max-height:260px;overflow:auto;border:1px solid #1e2636;border-radius:10px}
-    .alertrow{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #1e2636}
-    .statusdot{width:8px;height:8px;border-radius:50%}
-
-    .cam-row{padding:10px;border-bottom:1px solid #1e2636}
-    .cam-actions button{width:auto;min-width:88px}
-
-    .switchWrap{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
-    .switchWrap input{display:none}
-    .switch{width:48px;height:26px;background:#555;border-radius:30px;position:relative;transition:background .25s}
-    .switch::after{content:"";width:22px;height:22px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .25s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
-    .switchWrap input:checked + .switch{background:#1b8cff}
-    .switchWrap input:checked + .switch::after{left:24px}
-    .switchText{font-size:14px;color:#a9b1bd}
-    .cam-actions {
-      display: flex;       /* Alinea los botones en fila */
-      flex-direction: row; 
-      gap: 6px;            /* Espacio pequeño entre botones */
-      align-items: center;
-      flex-wrap: nowrap;   /* Evita que se bajen a la siguiente línea */
-    }
-    
-    .cam-btn {
-      padding: 4px 10px;   /* Tamaño reducido */
-      font-size: 12px;     /* Texto más pequeño */
-      border-radius: 4px;
-      cursor: pointer;
-      white-space: nowrap; /* Asegura que el texto no se rompa */
-      border: none;
-      transition: opacity 0.2s;
-    }
-    
-    .cam-btn:hover {
-      opacity: 0.8;
-    }
-    
-    /* Colores minimalistas para que no ocupen tanto peso visual */
-    .cam-btn-open { background-color: #28a745; color: white; }
-    .cam-btn-close { background-color: #6c757d; color: white; }
-    .cam-btn-del { background-color: #dc3545; color: white; }
-    .camcard.bigCam{grid-column:1 / -1;width:100%;border:2px solid #ff4757}
-    .bigCam .frame{object-fit:cover !important}
-    #camGrid.smallLayout .camcard:not(.bigCam){max-width:360px}
-
-    footer{background-color:#111;color:#eee;text-align:center;padding:10px 0;font-size:.9rem}
-
-    @media (max-width: 768px) {
-      main{grid-template-columns:1fr;padding:12px}
-      header{padding:12px;flex-wrap:wrap;align-items:flex-start}
-      header h1{width:100%;font-size:17px}
-      #btnLogout{width:100% !important}
-      .row{flex-direction:column}
-      .grid{grid-template-columns:1fr}
-      .alerts{max-height:none}
-      .alertrow{flex-wrap:wrap;align-items:flex-start}
-      .cam-actions{width:100%}
-      .cam-actions button{flex:1;min-width:0}
-      .action-btn{flex:1}
-    }
-  </style>
+  <link rel="stylesheet" href="/styles.css" />
   <script src="/config.js"></script>
 </head>
 <body>
@@ -105,40 +12,45 @@
   <h1>Sistema de Videovigilancia</h1>
   <div class="sp"></div>
   <div id="who" class="muted">-</div>
-  <button id="btnLogout" class="sec" style="width:auto">Cerrar sesion</button>
+  <button id="btnLogout" class="sec w-auto">Cerrar sesion</button>
 </header>
 
 <main>
   <section class="panel" id="left">
-    <h2 style="margin-top:0">Registrar camara</h2>
+    <div class="flex-between">
+      <h2 class="mt-0">Registrar camara</h2>
+      <button id="btnToggleReg" class="collapse-toggle" title="Ocultar/Mostrar registro">&#9650;</button>
+    </div>
 
-    <div class="row">
-      <div>
-        <label>Serial</label>
-        <input id="cam_serial" placeholder="SN-LOBBY-001" />
+    <div id="regSection" class="collapsible">
+      <div class="row">
+        <div>
+          <label>Serial</label>
+          <input id="cam_serial" placeholder="SN-LOBBY-001" />
+        </div>
+        <div>
+          <label>Fuente</label>
+          <input id="cam_src" placeholder="0 | rtsp://user:pass@ip:554/stream" />
+        </div>
       </div>
+
       <div>
-        <label>Fuente</label>
-        <input id="cam_src" placeholder="0 | rtsp://user:pass@ip:554/stream" />
+        <label>Ubicacion</label>
+        <input id="cam_location" placeholder="Lobby principal - puerta norte" />
+      </div>
+
+      <div class="row mt-10">
+        <button id="btnAdd">Agregar/Actualizar</button>
       </div>
     </div>
 
-    <div>
-      <label>Ubicacion</label>
-      <input id="cam_location" placeholder="Lobby principal - puerta norte" />
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <button id="btnAdd">Agregar/Actualizar</button>
-    </div>
-
-    <h3 style="margin:14px 0 6px">Camaras registradas</h3>
+    <h3 class="section-title">Camaras registradas</h3>
     <div id="camList" class="alerts"></div>
 
-    <hr style="margin:16px 0;border-color:#1e2636" />
+    <hr class="section-divider" />
 
-    <div class="card" style="padding:14px;margin-bottom:20px;border:1px solid #1f293b;background:#0f1522;border-radius:12px;">
-      <h3 style="margin:0 0 10px;">Opciones del Sistema</h3>
+    <div class="options-card">
+      <h3>Opciones del Sistema</h3>
 
       <label class="switchWrap">
         <input type="checkbox" id="chkOverlay">
@@ -146,13 +58,13 @@
         <span class="switchText">Mostrar esqueleto</span>
       </label>
 
-      <div style="margin-top:14px;">
-        <label style="display:flex;align-items:center;gap:10px;font-size:13px;">
-          <span style="min-width:110px;">Sensibilidad alerta</span>
-          <input type="range" id="rngThrOn" min="0.10" max="0.95" step="0.01" value="0.65" style="flex:1;min-height:44px;">
-          <span id="lblThrOn" style="min-width:42px;text-align:right;font-variant-numeric:tabular-nums;">0.65</span>
+      <div class="mt-14">
+        <label class="threshold-label">
+          <span>Sensibilidad alerta</span>
+          <input type="range" id="rngThrOn" min="0.10" max="0.95" step="0.01" value="0.65">
+          <span id="lblThrOn" class="threshold-value">0.65</span>
         </label>
-        <div style="font-size:11px;color:#7a8599;margin-top:4px;">
+        <div class="threshold-hint">
           Mayor valor = menos falsos positivos. THR_OFF = THR_ON - 0.15.
         </div>
       </div>
@@ -163,11 +75,11 @@
   </section>
 
   <section class="panel" id="right">
-    <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
-      <h2 style="margin:0">Monitoreo</h2>
+    <div class="flex-between gap-10">
+      <h2 class="mt-0">Monitoreo</h2>
     </div>
 
-    <div id="camGrid" class="grid" style="margin-top:10px"></div>
+    <div id="camGrid" class="grid mt-10"></div>
   </section>
 </main>
 
@@ -400,9 +312,9 @@ function rowCam(cfg) {
   const div = document.createElement('div');
   div.className = 'cam-row';
   div.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <div class="statusdot" id="${domId('dot', serial)}" style="background:#666"></div>
-      <div style="flex:1">
+    <div class="flex-row gap-8 mb-8">
+      <div class="statusdot" id="${domId('dot', serial)}"></div>
+      <div class="flex-1">
         <b>${serial}</b>
         <div class="muted">${location}</div>
       </div>
@@ -465,14 +377,14 @@ function camCard(serialNumber, locationDescription = '') {
       </div>
     </div>
     <div class="frame">
-      <img id="img-${key}" style="width:100%;height:100%;object-fit:contain"/>
+      <img id="img-${key}" />
     </div>
     <div class="stats">
       <div>TS: <span id="ts-${key}" class="muted">-</span></div>
       <div>Estado: <b id="state-${key}" class="ok">OK</b></div>
       <div>Prob: <b id="prob-${key}" class="muted">0.000</b></div>
     </div>
-    <div style="padding:4px 12px 8px;font-size:11px;color:#7a8599;word-break:break-all">${src}</div>
+    <div class="cam-src-label">${src}</div>
   `;
   return card;
 }
@@ -647,7 +559,7 @@ function addAlert(msg) {
   const tsText = new Date(ts * 1000).toLocaleString();
 
   row.innerHTML = `
-    <div style="flex:1;min-width:220px">
+    <div class="alert-info">
       <b>${serial_number}</b>
       <div class="muted">prob=${prob.toFixed(3)} · ${tsText}</div>
     </div>
@@ -666,6 +578,12 @@ function addAlert(msg) {
 =========================== */
 $('#btnLogout').onclick = logout;
 $('#btnAdd').onclick = addCamera;
+$('#btnToggleReg').onclick = () => {
+  const sec = $('#regSection');
+  const btn = $('#btnToggleReg');
+  sec.classList.toggle('hidden');
+  btn.classList.toggle('collapsed');
+};
 
 (async function init() {
   if (!localStorage.getItem(tokenKey)) {

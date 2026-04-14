@@ -4,55 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Panel de Jefe - Sicher</title>
-
-<style>
-  :root{--bg:#0b0f17;--panel:#141b2c;--card:#0e1421;--mut:#9aa4b2;--txt:#e6edf3;--b:#1e2636;--btn:#335cce;--danger:#8b1b1b}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Roboto;background:var(--bg);color:var(--txt);display:flex;min-height:100vh}
-
-  aside{width:270px;background:#111826;border-right:1px solid #1a2234;padding:20px 14px;display:flex;flex-direction:column;gap:14px}
-  .brand h2{font-size:20px;margin:0 0 8px;font-weight:700}
-  #usuarioHeader{color:#8fb3ff;margin:0;font-size:15px}
-
-  .navItems{display:flex;flex-direction:column;gap:8px}
-  .item{
-    border:none;background:transparent;color:var(--mut);text-align:left;border-radius:10px;
-    padding:10px 12px;cursor:pointer;font-size:14px;min-height:44px
-  }
-  .item:hover{background:#1b2437}
-  .item.active{background:#23314e;color:#fff}
-  .item.logout{color:#ffbdc2}
-
-  main{flex:1;padding:24px;min-width:0}
-  h1{margin-top:0;font-size:26px;font-weight:800}
-
-  .sec{
-    margin-bottom:10px;padding:10px 14px;border-radius:10px;background:var(--danger);
-    color:white;border:none;cursor:pointer;min-height:44px
-  }
-
-  .tableWrap{overflow-x:auto;border:1px solid #1e2636;border-radius:12px;background:var(--panel)}
-  table{width:100%;min-width:760px;border-collapse:collapse}
-  th,td{padding:12px;border-bottom:1px solid #1e2636;font-size:14px;vertical-align:top}
-  th{background:#192236;text-align:left;color:#8fb3ff}
-  tr:hover{background:#1a2335}
-
-  .status{padding:4px 8px;border-radius:999px;font-size:12px;display:inline-block}
-  .st-pending{background:#4a3f1d;color:#ffd986}
-  .st-true{background:#1d4a2d;color:#9ff0b4}
-  .st-false{background:#5b1f2c;color:#ffc1cb}
-
-  @media (max-width: 768px) {
-    body{flex-direction:column}
-    aside{width:100%;border-right:none;border-bottom:1px solid #1a2234;padding:12px}
-    .brand{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-    .navItems{flex-direction:row;overflow-x:auto;padding-bottom:2px}
-    .item{white-space:nowrap;flex:0 0 auto}
-    .item.logout{margin-left:auto}
-    main{padding:14px}
-    h1{font-size:22px}
-  }
-</style>
+<link rel="stylesheet" href="/admin.css"/>
 <script src="/config.js"></script>
 </head>
 
@@ -91,7 +43,7 @@
     </div>
   </section>
 
-  <section id="camaras" class="tab" style="display:none;">
+  <section id="camaras" class="tab tab-hidden">
     <div class="tableWrap">
       <table>
         <thead>
@@ -102,13 +54,11 @@
     </div>
   </section>
 
-  <section id="empresas" class="tab" style="display:none;">
-    <form id="formEmpresa" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;" onsubmit="crearEmpresa(event)">
-      <input id="inpEmpresaNombre" placeholder="Nombre empresa" required
-        style="flex:1;min-width:160px;padding:9px 12px;border-radius:8px;border:1px solid #1e2636;background:#0e1421;color:#e6edf3;font-size:14px"/>
-      <input id="inpEmpresaRut" placeholder="RUT (opcional)"
-        style="flex:1;min-width:140px;padding:9px 12px;border-radius:8px;border:1px solid #1e2636;background:#0e1421;color:#e6edf3;font-size:14px"/>
-      <button type="submit" style="padding:9px 18px;border-radius:8px;border:none;background:#335cce;color:#fff;cursor:pointer;font-weight:600">Crear empresa</button>
+  <section id="empresas" class="tab tab-hidden">
+    <form id="formEmpresa" class="empresa-form" onsubmit="crearEmpresa(event)">
+      <input id="inpEmpresaNombre" placeholder="Nombre empresa" required class="empresa-input empresa-input-wide"/>
+      <input id="inpEmpresaRut" placeholder="RUT (opcional)" class="empresa-input"/>
+      <button type="submit" class="empresa-submit">Crear empresa</button>
     </form>
     <div class="tableWrap">
       <table>
@@ -120,7 +70,7 @@
     </div>
   </section>
 
-  <section id="alertas" class="tab" style="display:none;">
+  <section id="alertas" class="tab tab-hidden">
     <button onclick="clearAlertas()" class="sec">Borrar historial de alertas</button>
     <div class="tableWrap">
       <table>
@@ -134,7 +84,7 @@
     </div>
   </section>
 
-  <section id="accesos" class="tab" style="display:none;">
+  <section id="accesos" class="tab tab-hidden">
     <button onclick="clearAccesos()" class="sec">Borrar historial de accesos</button>
     <div class="tableWrap">
       <table>
@@ -150,7 +100,7 @@
     </div>
   </section>
 
-  <section id="acciones" class="tab" style="display:none;">
+  <section id="acciones" class="tab tab-hidden">
     <button onclick="clearAcciones()" class="sec">Borrar historial de acciones</button>
     <div class="tableWrap">
       <table>
@@ -187,8 +137,8 @@ const apiUrl = path => (window.sicherApiUrl ? window.sicherApiUrl(path) : path);
    Navegacion entre pestañas
 ============================================================ */
 function showTab(btn, tab){
-  document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
-  document.getElementById(tab).style.display = 'block';
+  document.querySelectorAll('.tab').forEach(t => t.classList.add('tab-hidden'));
+  document.getElementById(tab).classList.remove('tab-hidden');
 
   document.querySelectorAll('.item[data-tab]').forEach(i => i.classList.remove('active'));
   btn.classList.add('active');
