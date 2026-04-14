@@ -43,15 +43,7 @@
     .statusdot{width:8px;height:8px;border-radius:50%}
 
     .cam-row{padding:10px;border-bottom:1px solid #1e2636}
-    .cam-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
     .cam-actions button{width:auto;min-width:88px}
-    .cam-btn{font-weight:600;border:none;border-radius:8px;padding:8px 14px;min-height:36px;font-size:13px}
-    .cam-btn-open{background:#1b6b3a;color:#e6edf3}
-    .cam-btn-open:hover{background:#22854a}
-    .cam-btn-close{background:#b08a00;color:#1a1a1a}
-    .cam-btn-close:hover{background:#cca000}
-    .cam-btn-del{background:#8b2035;color:#e6edf3}
-    .cam-btn-del:hover{background:#a82845}
 
     .switchWrap{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
     .switchWrap input{display:none}
@@ -60,7 +52,32 @@
     .switchWrap input:checked + .switch{background:#1b8cff}
     .switchWrap input:checked + .switch::after{left:24px}
     .switchText{font-size:14px;color:#a9b1bd}
-
+    .cam-actions {
+      display: flex;       /* Alinea los botones en fila */
+      flex-direction: row; 
+      gap: 6px;            /* Espacio pequeño entre botones */
+      align-items: center;
+      flex-wrap: nowrap;   /* Evita que se bajen a la siguiente línea */
+    }
+    
+    .cam-btn {
+      padding: 4px 10px;   /* Tamaño reducido */
+      font-size: 12px;     /* Texto más pequeño */
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap; /* Asegura que el texto no se rompa */
+      border: none;
+      transition: opacity 0.2s;
+    }
+    
+    .cam-btn:hover {
+      opacity: 0.8;
+    }
+    
+    /* Colores minimalistas para que no ocupen tanto peso visual */
+    .cam-btn-open { background-color: #28a745; color: white; }
+    .cam-btn-close { background-color: #6c757d; color: white; }
+    .cam-btn-del { background-color: #dc3545; color: white; }
     .camcard.bigCam{grid-column:1 / -1;width:100%;border:2px solid #ff4757}
     .bigCam .frame{object-fit:cover !important}
     #camGrid.smallLayout .camcard:not(.bigCam){max-width:360px}
