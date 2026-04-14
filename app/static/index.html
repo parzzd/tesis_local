@@ -289,19 +289,29 @@ async function addCamera() {
   await loadCameras();
 }
 
-async function deleteCamera(serialNumber) {
+async function deleteCamera(serialNumber,btnElement) {
   closeWS(serialNumber);
-
+  if (btnElement) {
+    const row = btnElement.closest('.cam-row');
+    if (row) row.remove();
+  }
   const headers = {};
   const email = localStorage.getItem(emailKey);
   const userId = localStorage.getItem('sicher.user_id');
   if (email) headers['X-User-Email'] = email;
   if (userId) headers['X-User-Id'] = userId;
 
-  await fetch(apiUrl('/cameras/' + encodeURIComponent(serialNumber)), {
-    method: 'DELETE',
-    headers
-  });
+  try {
+    await fetch(apiUrl('/cameras/' + encodeURIComponent(serialNumber)), {
+      method: 'DELETE',
+      headers
+    });
+  
+  } catch (error) {
+    console.error("Error al borrar en el servidor", error);
+    alert("Hubo un error de conexión. Recargando cámaras...");
+    await loadCameras(); 
+  }
 
   await loadCameras();
 }
@@ -355,7 +365,7 @@ async function loadCameras() {
     b.onclick = () => closeWS(b.dataset.serial);
   });
   list.querySelectorAll('.btnDel').forEach(b => {
-    b.onclick = () => deleteCamera(b.dataset.serial);
+    b.onclick = (e) => deleteCamera(b.dataset.serial, e.target);
   });
 }
 
