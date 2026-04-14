@@ -43,7 +43,7 @@ node_modules/
 dist/
 build/
 app/static/config.js
-static/
+/static/
 
 # ------------------------------
 # Local DB / runtime artifacts
