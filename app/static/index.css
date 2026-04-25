@@ -66,7 +66,7 @@ label {
 
 input, button, select {
   width: 100%;
-  min-height: 44px;
+  min-height: 27px;
   padding: 11px 12px;
   border-radius: 10px;
   border: 1px solid #263248;
@@ -266,6 +266,8 @@ button.sec { background: #24314a; border-color: #2c3d59 }
 .switchWrap input:checked + .switch { background: #1b8cff }
 .switchWrap input:checked + .switch::after { left: 24px }
 .switchText { font-size: 14px; color: #a9b1bd }
+.toolbar-switch { margin: 0 }
+.toolbar-switch .switchText { white-space: nowrap }
 
 /* ===========================
    OPTIONS CARD

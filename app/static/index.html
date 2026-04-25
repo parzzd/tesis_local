@@ -74,6 +74,11 @@
   <section class="panel" id="right">
     <div class="flex-between gap-10">
       <h2 class="mt-0">Monitoreo</h2>
+      <label class="switchWrap toolbar-switch" title="Silenciar sonido de alertas">
+        <input type="checkbox" id="chkMuteAlert">
+        <span class="switch"></span>
+        <span class="switchText">Silenciar sonido</span>
+      </label>
     </div>
 
     <div id="camGrid" class="grid mt-10"></div>
@@ -93,6 +98,7 @@ let switching = false;
 const $ = s => document.querySelector(s);
 const tokenKey = 'sicher.token';
 const emailKey = 'sicher.email';
+const alertMuteKey = 'sicher.alert_muted';
 const wsMap = new Map();
 const cameraMeta = new Map();
 let activeBigCam = null;
@@ -231,6 +237,18 @@ async function setThreshold() {
 
 $('#rngThrOn').addEventListener('input', setThreshold);
 
+function loadAlertSoundPreference() {
+  const muted = localStorage.getItem(alertMuteKey) === '1';
+  const chkMute = $('#chkMuteAlert');
+  if (chkMute) chkMute.checked = muted;
+}
+
+function setAlertSoundPreference() {
+  const muted = $('#chkMuteAlert')?.checked === true;
+  localStorage.setItem(alertMuteKey, muted ? '1' : '0');
+  if (muted) pendingAlertSound = false;
+}
+
 /* ===========================
     SESION
 =========================== */
@@ -240,7 +258,7 @@ function setWho() {
   const role = localStorage.getItem('sicher.role') || localStorage.getItem('sicher.charge') || '-';
 
   if (nombre && apellido) {
-    $('#who').innerHTML = `Bienvenido: <b>${nombre} ${apellido}</b> (${role})`;
+    $('#who').innerHTML = `Bienvenido: <b>${nombre} ${apellido}</b> `;
   } else {
     $('#who').innerHTML = 'No autenticado';
   }
@@ -552,19 +570,81 @@ async function rejectAlert(ev) {
 /* ===========================
    SONIDO DE ALERTA
 =========================== */
-const alertAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let alertAudioCtx = null;
+let pendingAlertSound = false;
+let audioUnlockBound = false;
+
+function getAlertAudioCtx() {
+  if (alertAudioCtx) return alertAudioCtx;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  alertAudioCtx = new AudioCtx();
+  return alertAudioCtx;
+}
+
+async function unlockAlertAudio() {
+  const ctx = getAlertAudioCtx();
+  if (!ctx) return false;
+
+  if (ctx.state === 'suspended') {
+    try {
+      await ctx.resume();
+    } catch (e) {
+      console.warn('No se pudo reanudar el audio de alertas:', e);
+    }
+  }
+
+  if (ctx.state === 'running') {
+    if (audioUnlockBound) {
+      ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
+        document.removeEventListener(eventName, unlockAlertAudio);
+      });
+      audioUnlockBound = false;
+    }
+
+    if (pendingAlertSound) {
+      pendingAlertSound = false;
+      playAlertSound();
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function bindAlertAudioUnlock() {
+  if (audioUnlockBound) return;
+  ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
+    document.addEventListener(eventName, unlockAlertAudio, { passive: true });
+  });
+  audioUnlockBound = true;
+}
 
 function playAlertSound() {
-  const osc = alertAudioCtx.createOscillator();
-  const gain = alertAudioCtx.createGain();
+  if ($('#chkMuteAlert')?.checked === true) {
+    pendingAlertSound = false;
+    return;
+  }
+
+  const ctx = getAlertAudioCtx();
+  if (!ctx) return;
+
+  if (ctx.state !== 'running') {
+    pendingAlertSound = true;
+    unlockAlertAudio();
+    return;
+  }
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
   osc.connect(gain);
-  gain.connect(alertAudioCtx.destination);
+  gain.connect(ctx.destination);
   osc.type = 'sine';
   osc.frequency.value = 880;
-  gain.gain.setValueAtTime(0.3, alertAudioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, alertAudioCtx.currentTime + 0.5);
-  osc.start(alertAudioCtx.currentTime);
-  osc.stop(alertAudioCtx.currentTime + 0.5);
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.5);
 }
 
 function addAlert(msg) {
@@ -605,6 +685,7 @@ function addAlert(msg) {
 =========================== */
 $('#btnLogout').onclick = logout;
 $('#btnAdd').onclick = addCamera;
+$('#chkMuteAlert').addEventListener('change', setAlertSoundPreference);
 $('#btnToggleReg').onclick = () => {
   const sec = $('#regSection');
   const btn = $('#btnToggleReg');
@@ -618,6 +699,8 @@ $('#btnToggleReg').onclick = () => {
     return;
   }
 
+  loadAlertSoundPreference();
+  bindAlertAudioUnlock();
   setWho();
   await loadOverlay();
   await loadThreshold();
