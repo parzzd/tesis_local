@@ -36,7 +36,7 @@ from app.crud import (
 )
 from app.database import Base, SessionLocal, engine
 from app.models import AccessLog, AlertLog, Camera, CameraAction, Company, User
-from app.schemas import AlertDecision, CameraConfig, CompanyCreate, LoginRequest, RegisterRequest
+from app.schemas import AlertDecision, CameraConfig, CameraStreamStatus, CompanyCreate, LoginRequest, RegisterRequest
 from app.utils import verify_password
 
 load_dotenv()
@@ -708,6 +708,29 @@ def delete_camera(serial_number: str, request: Request, db: Session = Depends(ge
 
     add_camera_action(db, actor.id, camera.id, "delete")
 
+    return {"ok": True}
+
+
+@app.post("/cameras/{serial_number}/status")
+def set_camera_stream_status(serial_number: str, payload: CameraStreamStatus, request: Request, db: Session = Depends(get_db)):
+    actor = _resolve_user_from_request(db, request)
+    if actor is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if actor.company_id is None:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+
+    camera = db.query(Camera).filter(Camera.serial_number == serial_number).first()
+    if camera is None:
+        return JSONResponse({"error": "Camara no encontrada"}, status_code=404)
+    if camera.company_id != actor.company_id:
+        return JSONResponse({"error": "No autorizado para esta camara"}, status_code=403)
+
+    detail = (payload.detail or "").strip()
+    action = f"status:{payload.status}"
+    if detail:
+        action = f"{action}:{detail[:120]}"
+
+    add_camera_action(db, actor.id, camera.id, action)
     return {"ok": True}
 
 

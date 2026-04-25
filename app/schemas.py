@@ -41,3 +41,8 @@ class AlertDecision(BaseModel):
     status: Optional[Literal["pending", "true_positive", "false_positive"]] = None
     evidence_path: Optional[str] = None
     reviewer_email: Optional[str] = None
+
+
+class CameraStreamStatus(BaseModel):
+    status: Literal["online", "offline", "error"]
+    detail: Optional[str] = None

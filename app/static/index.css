@@ -200,7 +200,11 @@ button.sec { background: #24314a; border-color: #2c3d59 }
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: #666;
 }
+.statusdot.st-online { background: var(--ok) }
+.statusdot.st-offline { background: #666 }
+.statusdot.st-error { background: var(--alert) }
 
 /* ===========================
    CAMERA LIST ROW
@@ -208,6 +212,10 @@ button.sec { background: #24314a; border-color: #2c3d59 }
 .cam-row {
   padding: 10px;
   border-bottom: 1px solid var(--border);
+}
+.cam-conn {
+  margin-top: 4px;
+  font-size: 12px;
 }
 .cam-actions {
   display: flex;
@@ -231,6 +239,10 @@ button.sec { background: #24314a; border-color: #2c3d59 }
 .cam-btn-open  { background-color: #28a745; color: white }
 .cam-btn-close { background-color: #6c757d; color: white }
 .cam-btn-del   { background-color: #dc3545; color: white }
+
+.st-online { color: var(--ok) }
+.st-offline { color: #8c98ad }
+.st-error { color: var(--alert) }
 
 /* ===========================
    SWITCH TOGGLE

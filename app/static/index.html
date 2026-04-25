@@ -100,6 +100,11 @@ const tokenKey = 'sicher.token';
 const emailKey = 'sicher.email';
 const alertMuteKey = 'sicher.alert_muted';
 const wsMap = new Map();
+const wsReconnectTimers = new Map();
+const wsReconnectAttempts = new Map();
+const wsExpectedClose = new Set();
+const wsLastStatus = new Map();
+const wsLastStatusAt = new Map();
 const cameraMeta = new Map();
 let activeBigCam = null;
 
@@ -109,6 +114,11 @@ const wsUrl = path => (window.sicherWsUrl ? window.sicherWsUrl(path) : path);
 
 const toDomKey = value => String(value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
 const domId = (prefix, serialNumber) => `${prefix}-${toDomKey(serialNumber)}`;
+const CONN_STATUS_LABEL = {
+  online: 'Online',
+  offline: 'Offline',
+  error: 'Error'
+};
 
 function authHeaders() {
   const headers = { 'Content-Type': 'application/json' };
@@ -123,6 +133,76 @@ function enqueueCamera(serialNumber, pvid) {
   if (!alertQueue.some(c => c.serial_number === serialNumber)) {
     alertQueue.push({ serial_number: serialNumber, pvid });
   }
+}
+
+function setConnectionState(serialNumber, status, detail = '') {
+  const dot = document.getElementById(domId('dot', serialNumber));
+  const rowStatus = document.getElementById(domId('conn', serialNumber));
+  const cardStatus = document.getElementById(domId('connCard', serialNumber));
+  const label = CONN_STATUS_LABEL[status] || status;
+
+  if (dot) {
+    dot.classList.remove('st-online', 'st-offline', 'st-error');
+    dot.classList.add(`st-${status}`);
+  }
+  if (rowStatus) {
+    rowStatus.textContent = label;
+    rowStatus.classList.remove('st-online', 'st-offline', 'st-error');
+    rowStatus.classList.add(`st-${status}`);
+    rowStatus.title = detail || '';
+  }
+  if (cardStatus) {
+    cardStatus.textContent = label;
+    cardStatus.classList.remove('st-online', 'st-offline', 'st-error');
+    cardStatus.classList.add(`st-${status}`);
+    cardStatus.title = detail || '';
+  }
+}
+
+async function reportCameraStatus(serialNumber, status, detail = '', force = false) {
+  const now = Date.now();
+  const lastStatus = wsLastStatus.get(serialNumber);
+  const lastAt = wsLastStatusAt.get(serialNumber) || 0;
+  if (!force && lastStatus === status && (now - lastAt) < 20000) return;
+
+  wsLastStatus.set(serialNumber, status);
+  wsLastStatusAt.set(serialNumber, now);
+
+  try {
+    await fetch(apiUrl(`/cameras/${encodeURIComponent(serialNumber)}/status`), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ status, detail: detail || null })
+    });
+  } catch (e) {
+    console.warn(`No se pudo registrar estado ${status} para ${serialNumber}:`, e);
+  }
+}
+
+function clearReconnectTimer(serialNumber) {
+  const timer = wsReconnectTimers.get(serialNumber);
+  if (timer) {
+    clearTimeout(timer);
+    wsReconnectTimers.delete(serialNumber);
+  }
+}
+
+function scheduleReconnect(serialNumber, src, locationDescription = '') {
+  if (wsExpectedClose.has(serialNumber)) return;
+  if (wsReconnectTimers.has(serialNumber)) return;
+
+  const attempts = wsReconnectAttempts.get(serialNumber) || 0;
+  const delayMs = Math.min(30000, 1000 * (2 ** attempts));
+  const detail = `reintento ${attempts + 1} en ${Math.round(delayMs / 1000)}s`;
+  setConnectionState(serialNumber, 'error', detail);
+  reportCameraStatus(serialNumber, 'error', detail).catch(() => {});
+
+  const timer = setTimeout(() => {
+    wsReconnectTimers.delete(serialNumber);
+    wsReconnectAttempts.set(serialNumber, attempts + 1);
+    openWS(serialNumber, src, locationDescription, { isReconnect: true });
+  }, delayMs);
+  wsReconnectTimers.set(serialNumber, timer);
 }
 
 async function processQueue() {
@@ -305,7 +385,7 @@ async function addCamera() {
 }
 
 async function deleteCamera(serialNumber,btnElement) {
-  closeWS(serialNumber);
+  closeWS(serialNumber, { removeCard: true, report: false });
   if (btnElement) {
     const row = btnElement.closest('.cam-row');
     if (row) row.remove();
@@ -342,6 +422,7 @@ function rowCam(cfg) {
       <div class="flex-1">
         <b>${serial}</b>
         <div class="muted">${location}</div>
+        <div id="${domId('conn', serial)}" class="cam-conn st-offline">Offline</div>
       </div>
     </div>
     <div class="cam-actions">
@@ -367,6 +448,13 @@ async function loadCameras() {
     if (!serial) return;
     cameraMeta.set(serial, cfg);
     list.appendChild(rowCam(cfg));
+    if (wsMap.has(serial)) {
+      setConnectionState(serial, 'online');
+    } else if (wsLastStatus.has(serial)) {
+      setConnectionState(serial, wsLastStatus.get(serial) || 'offline');
+    } else {
+      setConnectionState(serial, 'offline');
+    }
   });
 
   list.querySelectorAll('.btnOpen').forEach(b => {
@@ -407,6 +495,7 @@ function camCard(serialNumber, locationDescription = '') {
     <div class="stats">
       <div>TS: <span id="ts-${key}" class="muted">-</span></div>
       <div>Estado: <b id="state-${key}" class="ok">OK</b></div>
+      <div>Conexion: <b id="${domId('connCard', serialNumber)}" class="st-offline">Offline</b></div>
       <div>Prob: <b id="prob-${key}" class="muted">0.000</b></div>
     </div>
     <div class="cam-src-label">${src}</div>
@@ -414,7 +503,8 @@ function camCard(serialNumber, locationDescription = '') {
   return card;
 }
 
-function openWS(serialNumber, src, locationDescription = '') {
+function openWS(serialNumber, src, locationDescription = '', opts = {}) {
+  const { isReconnect = false } = opts;
   if (!serialNumber) return;
 
   const cardId = domId('card', serialNumber);
@@ -423,6 +513,12 @@ function openWS(serialNumber, src, locationDescription = '') {
   }
 
   if (wsMap.has(serialNumber)) return;
+  clearReconnectTimer(serialNumber);
+  if (!isReconnect) {
+    wsExpectedClose.delete(serialNumber);
+    wsReconnectAttempts.set(serialNumber, 0);
+  }
+  setConnectionState(serialNumber, 'offline', 'Conectando...');
 
   const qs = src ? `?src=${encodeURIComponent(src)}` : '';
   const url = wsUrl(`/ws/stream/${encodeURIComponent(serialNumber)}${qs}`);
@@ -431,15 +527,27 @@ function openWS(serialNumber, src, locationDescription = '') {
   ws.onopen = () => {
     const srv = $('#srv');
     if (srv) srv.textContent = url;
-    setDot(serialNumber, '#18a558');
+    wsReconnectAttempts.set(serialNumber, 0);
+    setConnectionState(serialNumber, 'online');
+    reportCameraStatus(serialNumber, 'online', isReconnect ? 'reconectado' : 'conexion abierta', isReconnect).catch(() => {});
   };
 
-  ws.onclose = () => {
-    setDot(serialNumber, '#666');
+  ws.onclose = (ev) => {
     wsMap.delete(serialNumber);
+    if (wsExpectedClose.has(serialNumber)) {
+      wsExpectedClose.delete(serialNumber);
+      clearReconnectTimer(serialNumber);
+      return;
+    }
+    setConnectionState(serialNumber, 'offline', ev?.reason || '');
+    reportCameraStatus(serialNumber, 'offline', ev?.reason || '').catch(() => {});
+    scheduleReconnect(serialNumber, src, locationDescription);
   };
 
-  ws.onerror = () => setDot(serialNumber, '#ff4757');
+  ws.onerror = () => {
+    setConnectionState(serialNumber, 'error', 'Fallo de conexion');
+    reportCameraStatus(serialNumber, 'error', 'fallo websocket').catch(() => {});
+  };
 
   ws.onmessage = (ev) => {
     try {
@@ -484,20 +592,26 @@ function openWS(serialNumber, src, locationDescription = '') {
   wsMap.set(serialNumber, ws);
 }
 
-function closeWS(serialNumber) {
+function closeWS(serialNumber, options = {}) {
+  const { removeCard = true, report = true } = options;
+  wsExpectedClose.add(serialNumber);
+  clearReconnectTimer(serialNumber);
+  wsReconnectAttempts.set(serialNumber, 0);
+
   const ws = wsMap.get(serialNumber);
   if (ws) {
     ws.close();
     wsMap.delete(serialNumber);
   }
 
-  const card = document.getElementById(domId('card', serialNumber));
-  if (card) card.remove();
-}
-
-function setDot(serialNumber, color) {
-  const dot = document.getElementById(domId('dot', serialNumber));
-  if (dot) dot.style.background = color;
+  setConnectionState(serialNumber, 'offline', 'Cerrado por usuario');
+  if (report) {
+    reportCameraStatus(serialNumber, 'offline', 'cerrado por usuario').catch(() => {});
+  }
+  if (removeCard) {
+    const card = document.getElementById(domId('card', serialNumber));
+    if (card) card.remove();
+  }
 }
 
 async function persistPendingAlert(msg) {
