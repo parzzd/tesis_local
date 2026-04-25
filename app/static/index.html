@@ -354,7 +354,7 @@ function rowCam(cfg) {
 }
 
 async function loadCameras() {
-  const res = await fetch(apiUrl('/cameras'));
+  const res = await fetch(apiUrl('/cameras'), { headers: authHeaders() });
   const cams = await res.json();
 
   cameraMeta.clear();

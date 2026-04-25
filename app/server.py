@@ -327,8 +327,22 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
 # -- Admin endpoints ---------------------------------------
 @app.get("/admin/users")
-def admin_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
+def admin_users(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+
+    # Un jefe solo puede ver usuarios de su propia empresa.
+    users_query = db.query(User)
+    if requester.company_id is None:
+        users_query = users_query.filter(User.id == requester.id)
+    else:
+        users_query = users_query.filter(User.company_id == requester.company_id)
+
+    users = users_query.order_by(User.id.asc()).all()
     return [
         {
             "id": u.id,
@@ -346,8 +360,22 @@ def admin_users(db: Session = Depends(get_db)):
 
 
 @app.get("/admin/logs/access")
-def admin_access_logs(db: Session = Depends(get_db)):
-    logs = db.query(AccessLog).order_by(AccessLog.timestamp.desc()).all()
+def admin_access_logs(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is None:
+        return []
+
+    logs = (
+        db.query(AccessLog)
+        .join(User, AccessLog.user_id == User.id)
+        .filter(User.company_id == requester.company_id)
+        .order_by(AccessLog.timestamp.desc())
+        .all()
+    )
     return [
         {
             "usuario": f"{log.user.nombre} {log.user.apellido}" if log.user else "-",
@@ -359,8 +387,22 @@ def admin_access_logs(db: Session = Depends(get_db)):
 
 
 @app.get("/admin/logs/cameras")
-def admin_camera_logs(db: Session = Depends(get_db)):
-    logs = db.query(CameraAction).order_by(CameraAction.timestamp.desc()).all()
+def admin_camera_logs(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is None:
+        return []
+
+    logs = (
+        db.query(CameraAction)
+        .join(Camera, CameraAction.camera_id == Camera.id)
+        .filter(Camera.company_id == requester.company_id)
+        .order_by(CameraAction.timestamp.desc())
+        .all()
+    )
     return [
         {
             "usuario": f"{log.user.nombre} {log.user.apellido}" if log.user else "-",
@@ -374,8 +416,22 @@ def admin_camera_logs(db: Session = Depends(get_db)):
 
 
 @app.get("/admin/logs/alerts")
-def admin_alert_logs(db: Session = Depends(get_db)):
-    logs = db.query(AlertLog).order_by(AlertLog.timestamp.desc()).all()
+def admin_alert_logs(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is None:
+        return []
+
+    logs = (
+        db.query(AlertLog)
+        .join(Camera, AlertLog.camera_id == Camera.id)
+        .filter(Camera.company_id == requester.company_id)
+        .order_by(AlertLog.timestamp.desc())
+        .all()
+    )
     return [
         {
             "id": l.id,
@@ -397,22 +453,49 @@ def admin_alert_logs(db: Session = Depends(get_db)):
 
 
 @app.delete("/admin/logs/access/clear")
-def clear_access_logs(db: Session = Depends(get_db)):
-    db.query(AccessLog).delete()
+def clear_access_logs(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is None:
+        return JSONResponse({"ok": True, "msg": "Sin datos para borrar"}, status_code=200)
+
+    user_ids = db.query(User.id).filter(User.company_id == requester.company_id)
+    db.query(AccessLog).filter(AccessLog.user_id.in_(user_ids)).delete(synchronize_session=False)
     db.commit()
     return {"ok": True, "msg": "Historial de accesos eliminado"}
 
 
 @app.delete("/admin/logs/actions/clear")
-def clear_action_logs(db: Session = Depends(get_db)):
-    db.query(CameraAction).delete()
+def clear_action_logs(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is None:
+        return JSONResponse({"ok": True, "msg": "Sin datos para borrar"}, status_code=200)
+
+    camera_ids = db.query(Camera.id).filter(Camera.company_id == requester.company_id)
+    db.query(CameraAction).filter(CameraAction.camera_id.in_(camera_ids)).delete(synchronize_session=False)
     db.commit()
     return {"ok": True, "msg": "Historial de acciones eliminado"}
 
 
 @app.delete("/admin/logs/alerts/clear")
-def clear_alert_logs(db: Session = Depends(get_db)):
-    db.query(AlertLog).delete()
+def clear_alert_logs(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is None:
+        return JSONResponse({"ok": True, "msg": "Sin datos para borrar"}, status_code=200)
+
+    camera_ids = db.query(Camera.id).filter(Camera.company_id == requester.company_id)
+    db.query(AlertLog).filter(AlertLog.camera_id.in_(camera_ids)).delete(synchronize_session=False)
     db.commit()
     return {"ok": True, "msg": "Alertas eliminadas"}
 
@@ -421,8 +504,16 @@ def clear_alert_logs(db: Session = Depends(get_db)):
 # EMPRESAS
 # ==========================================================
 @app.get("/companies")
-def list_companies(db: Session = Depends(get_db)):
-    rows = db.query(Company).order_by(Company.id.asc()).all()
+def list_companies(request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is None:
+        return []
+
+    rows = db.query(Company).filter(Company.id == requester.company_id).order_by(Company.id.asc()).all()
     return [
         {
             "id": c.id,
@@ -438,7 +529,15 @@ def list_companies(db: Session = Depends(get_db)):
 
 
 @app.post("/companies")
-def add_company(payload: CompanyCreate, db: Session = Depends(get_db)):
+def add_company(payload: CompanyCreate, request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id is not None:
+        return JSONResponse({"error": "No autorizado para crear otra empresa"}, status_code=403)
+
     name = payload.name.strip()
     if not name:
         return JSONResponse({"error": "Nombre obligatorio"}, status_code=400)
@@ -454,7 +553,15 @@ def add_company(payload: CompanyCreate, db: Session = Depends(get_db)):
 
 
 @app.patch("/companies/{company_id}")
-def update_company(company_id: int, payload: CompanyCreate, db: Session = Depends(get_db)):
+def update_company(company_id: int, payload: CompanyCreate, request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id != company_id:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+
     company = get_company_by_id(db, company_id)
     if not company:
         return JSONResponse({"error": "Empresa no encontrada"}, status_code=404)
@@ -475,7 +582,15 @@ def update_company(company_id: int, payload: CompanyCreate, db: Session = Depend
 
 
 @app.delete("/companies/{company_id}")
-def delete_company(company_id: int, db: Session = Depends(get_db)):
+def delete_company(company_id: int, request: Request, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if _role_name(requester) != ROLE_BOSS:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    if requester.company_id != company_id:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+
     company = get_company_by_id(db, company_id)
     if not company:
         return JSONResponse({"error": "Empresa no encontrada"}, status_code=404)
@@ -489,8 +604,15 @@ def delete_company(company_id: int, db: Session = Depends(get_db)):
 # CAMARAS  -  persistidas en DB (Supabase)
 # ==========================================================
 @app.get("/cameras")
-def list_cameras(include_inactive: bool = False, db: Session = Depends(get_db)):
+def list_cameras(request: Request, include_inactive: bool = False, db: Session = Depends(get_db)):
+    requester = _resolve_user_from_request(db, request)
+    if requester is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if requester.company_id is None:
+        return []
+
     query = db.query(Camera)
+    query = query.filter(Camera.company_id == requester.company_id)
     if not include_inactive:
         query = query.filter(Camera.is_active.is_(True))
 
@@ -512,6 +634,12 @@ def list_cameras(include_inactive: bool = False, db: Session = Depends(get_db)):
 
 @app.post("/cameras")
 def add_camera(cfg: CameraConfig, request: Request, db: Session = Depends(get_db)):
+    actor = _resolve_user_from_request(db, request)
+    if actor is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if actor.company_id is None:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+
     serial_number = cfg.serial_number.strip()
     src = cfg.src.strip()
 
@@ -525,28 +653,29 @@ def add_camera(cfg: CameraConfig, request: Request, db: Session = Depends(get_db
     action = "add"
 
     if camera:
+        if camera.company_id is None:
+            camera.company_id = actor.company_id
+        elif camera.company_id != actor.company_id:
+            return JSONResponse({"error": "No autorizado para esta camara"}, status_code=403)
+
         action = "update"
         camera.src = src
         camera.location_description = location_description
         camera.is_active = desired_active
-        if cfg.company_id is not None:
-            camera.company_id = cfg.company_id
     else:
         camera = Camera(
             serial_number=serial_number,
             src=src,
             location_description=location_description,
             is_active=desired_active,
-            company_id=cfg.company_id,
+            company_id=actor.company_id,
         )
         db.add(camera)
 
     db.commit()
     db.refresh(camera)
 
-    actor = _resolve_user_from_request(db, request)
-    if actor:
-        add_camera_action(db, actor.id, camera.id, action)
+    add_camera_action(db, actor.id, camera.id, action)
 
     return {
         "ok": True,
@@ -562,16 +691,22 @@ def add_camera(cfg: CameraConfig, request: Request, db: Session = Depends(get_db
 
 @app.delete("/cameras/{serial_number}")
 def delete_camera(serial_number: str, request: Request, db: Session = Depends(get_db)):
+    actor = _resolve_user_from_request(db, request)
+    if actor is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if actor.company_id is None:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+
     camera = db.query(Camera).filter(Camera.serial_number == serial_number).first()
     if camera is None:
         return JSONResponse({"error": "Camara no encontrada"}, status_code=404)
+    if camera.company_id != actor.company_id:
+        return JSONResponse({"error": "No autorizado para esta camara"}, status_code=403)
 
     camera.is_active = False
     db.commit()
 
-    actor = _resolve_user_from_request(db, request)
-    if actor:
-        add_camera_action(db, actor.id, camera.id, "delete")
+    add_camera_action(db, actor.id, camera.id, "delete")
 
     return {"ok": True}
 
@@ -580,9 +715,17 @@ def delete_camera(serial_number: str, request: Request, db: Session = Depends(ge
 @app.post("/alerts/save")
 def save_alert(decision: AlertDecision, request: Request, db: Session = Depends(get_db)):
     serial_number = decision.serial_number.strip()
+    reviewer = _resolve_user_from_request(db, request, decision.reviewer_email)
+    if reviewer is None:
+        return JSONResponse({"error": "No autenticado"}, status_code=401)
+    if reviewer.company_id is None:
+        return JSONResponse({"error": "No autorizado"}, status_code=403)
+
     camera = db.query(Camera).filter(Camera.serial_number == serial_number).first()
     if camera is None:
         return JSONResponse({"error": "Camara no encontrada"}, status_code=404)
+    if camera.company_id != reviewer.company_id:
+        return JSONResponse({"error": "No autorizado para esta camara"}, status_code=403)
 
     status = _resolve_status(decision)
     alert_ts = _resolve_alert_timestamp(decision.timestamp)
@@ -604,8 +747,6 @@ def save_alert(decision: AlertDecision, request: Request, db: Session = Depends(
             timestamp=alert_ts,
         )
         db.add(alert_log)
-
-    reviewer = _resolve_user_from_request(db, request, decision.reviewer_email)
 
     alert_log.prob = decision.prob
     alert_log.timestamp = alert_ts
